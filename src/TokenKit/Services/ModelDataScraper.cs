@@ -13,14 +13,30 @@ public class ModelDataScraper
         _httpClient = httpClient ?? new HttpClient();
     }
 
-    public async Task<List<ModelSpec>> FetchOpenAIModelsAsync()
+    /// <summary>
+    /// Fetches models from OpenAI's /v1/models endpoint if a valid API key is provided.
+    /// Falls back to local stock data if the key is missing or invalid.
+    /// </summary>
+    public async Task<List<ModelSpec>> FetchOpenAIModelsAsync(string? apiKey = null)
     {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            Console.WriteLine("⚠️ No API key provided. Using fallback OpenAI model data.");
+            return GetFallbackModels();
+        }
+
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<JsonElement>("https://api.openai.com/v1/models");
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+            var response = await _httpClient.GetAsync("https://api.openai.com/v1/models");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             var models = new List<ModelSpec>();
 
-            foreach (var item in response.GetProperty("data").EnumerateArray())
+            foreach (var item in json.GetProperty("data").EnumerateArray())
             {
                 var id = item.GetProperty("id").GetString() ?? "";
                 if (id.StartsWith("gpt-"))
@@ -37,43 +53,22 @@ public class ModelDataScraper
                 }
             }
 
-            return models;
+            if (models.Count == 0)
+                Console.WriteLine("⚠️ No GPT models found from API. Using fallback data instead.");
+
+            return models.Count > 0 ? models : GetFallbackModels();
         }
-        catch
+        catch (Exception ex)
         {
-            // fallback for offline/dev
-            return new List<ModelSpec>
-            {
-                new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 128000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" },
-                new() { Id = "gpt-4o-mini", Provider = "OpenAI", MaxTokens = 64000, InputPricePer1K = 0.002m, OutputPricePer1K = 0.010m, Encoding = "cl100k_base" }
-            };
+            Console.WriteLine($"❌ Failed to fetch live OpenAI model data: {ex.Message}");
+            return GetFallbackModels();
         }
     }
 
-    public async Task<List<ModelSpec>> FetchAnthropicModelsAsync()
+    private static List<ModelSpec> GetFallbackModels() => new()
     {
-        try
-        {
-            // Anthropic doesn’t have a public model list, so we mock it
-            await Task.Delay(200);
-            return new List<ModelSpec>
-            {
-                new() { Id = "claude-3-opus", Provider = "Anthropic", MaxTokens = 200000, InputPricePer1K = 0.008m, OutputPricePer1K = 0.024m, Encoding = "anthropic-v1" },
-                new() { Id = "claude-3-sonnet", Provider = "Anthropic", MaxTokens = 160000, InputPricePer1K = 0.003m, OutputPricePer1K = 0.015m, Encoding = "anthropic-v1" }
-            };
-        }
-        catch
-        {
-            return new List<ModelSpec>();
-        }
-    }
-
-    public async Task<List<ModelSpec>> FetchAllAsync()
-    {
-        var openAI = await FetchOpenAIModelsAsync();
-        var anthropic = await FetchAnthropicModelsAsync();
-
-        return openAI.Concat(anthropic).ToList();
-    }
+        new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 128000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" },
+        new() { Id = "gpt-4o-mini", Provider = "OpenAI", MaxTokens = 64000, InputPricePer1K = 0.002m, OutputPricePer1K = 0.010m, Encoding = "cl100k_base" },
+        new() { Id = "gpt-3.5-turbo", Provider = "OpenAI", MaxTokens = 4096, InputPricePer1K = 0.0015m, OutputPricePer1K = 0.002m, Encoding = "cl100k_base" }
+    };
 }
-

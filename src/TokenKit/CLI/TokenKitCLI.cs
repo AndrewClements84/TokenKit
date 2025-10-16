@@ -25,10 +25,10 @@ public static class TokenKitCLI
                 await ValidateAsync(args);
                 break;
             case "update-models":
-                await UpdateModelsAsync();
+                await UpdateModelsAsync(args);
                 break;
             case "scrape-models":
-                await ScrapeModelsAsync();
+                await ScrapeModelsAsync(args);
                 break;
             case "--help":
             case "-h":
@@ -48,11 +48,12 @@ public static class TokenKitCLI
         📘 Usage:
           tokenkit analyze "<text | path>" --model <model-id>
           tokenkit validate "<text | path>" --model <model-id>
-          tokenkit update-models [--from-stdin]
+          tokenkit update-models [--openai-key <key>]
+          tokenkit scrape-models [--openai-key <key>]
 
         💡 Input Options:
           • Inline text  →  tokenkit analyze "Hello world!" --model gpt-4o
-          • From file    →  tokenkit analyze prompt.txt --model claude-3
+          • From file    →  tokenkit analyze prompt.txt --model gpt-4o
           • From stdin   →  echo "Hello world!" | tokenkit analyze --model gpt-4o
 
         🔄 Model Updates:
@@ -62,11 +63,8 @@ public static class TokenKitCLI
               tokenkit scrape-models
           • Pipe JSON directly (stdin):
               cat newmodels.json | tokenkit update-models
-
-        🧩 Examples:
-          tokenkit analyze "Write a haiku about energy efficiency" --model gpt-4o
-          tokenkit validate prompt.txt --model claude-3
-          echo "The quick brown fox" | tokenkit analyze --model gpt-4o
+          • Update using OpenAI API key:
+              tokenkit update-models --openai-key sk-xxxx
 
         🧾 Output:
           JSON-formatted summary including token count, estimated cost, and validation status.
@@ -177,7 +175,7 @@ public static class TokenKitCLI
         Console.WriteLine(JsonSerializer.Serialize(validation, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    private static async Task UpdateModelsAsync()
+    private static async Task UpdateModelsAsync(string[] args)
     {
         string? pipedInput = null;
         if (Console.IsInputRedirected)
@@ -185,6 +183,12 @@ public static class TokenKitCLI
             pipedInput = await Console.In.ReadToEndAsync();
             pipedInput = pipedInput.Trim();
         }
+
+        // Detect optional --openai-key argument
+        string? openAiKey = null;
+        var keyIndex = Array.IndexOf(args, "--openai-key");
+        if (keyIndex >= 0 && keyIndex + 1 < args.Length)
+            openAiKey = args[keyIndex + 1];
 
         var updater = new ModelDataUpdater("Registry/models.data.json");
 
@@ -210,23 +214,29 @@ public static class TokenKitCLI
         }
         else
         {
-            await updater.UpdateAsync();
-            Console.WriteLine("✅ Model data updated successfully from default source.");
+            await updater.UpdateAsync(openAiKey);
+            Console.WriteLine("✅ Model data updated successfully from available source.");
         }
     }
 
-    private static async Task ScrapeModelsAsync()
+    private static async Task ScrapeModelsAsync(string[] args)
     {
-        Console.WriteLine("🔍 Fetching latest model data from providers...");
+        Console.WriteLine("🔍 Fetching latest OpenAI model data...");
+
+        // Detect optional --openai-key argument
+        string? openAiKey = null;
+        var keyIndex = Array.IndexOf(args, "--openai-key");
+        if (keyIndex >= 0 && keyIndex + 1 < args.Length)
+            openAiKey = args[keyIndex + 1];
 
         try
         {
             var scraper = new ModelDataScraper();
-            var models = await scraper.FetchAllAsync();
+            var models = await scraper.FetchOpenAIModelsAsync(openAiKey);
 
             if (models.Count == 0)
             {
-                Console.WriteLine("⚠️ No models retrieved (possibly offline or API unavailable).");
+                Console.WriteLine("⚠️ No models retrieved (possibly offline or missing API key).");
                 return;
             }
 
@@ -235,7 +245,7 @@ public static class TokenKitCLI
                 Console.WriteLine($"  - {m.Provider}: {m.Id} ({m.MaxTokens} tokens)");
 
             Console.WriteLine("\nTo save these models locally, run:");
-            Console.WriteLine("  tokenkit update-models");
+            Console.WriteLine("  tokenkit update-models [--openai-key sk-xxxx]");
         }
         catch (Exception ex)
         {

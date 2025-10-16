@@ -6,5 +6,38 @@
     "InputPricePer1K": 0.005,
     "OutputPricePer1K": 0.015,
     "Encoding": "cl100k_base"
+  },
+  {
+    "Id": "gpt-4o-mini",
+    "Provider": "OpenAI",
+    "MaxTokens": 64000,
+    "InputPricePer1K": 0.002,
+    "OutputPricePer1K": 0.010,
+    "Encoding": "cl100k_base"
+  },
+  {
+    "Id": "gpt-3.5-turbo",
+    "Provider": "OpenAI",
+    "MaxTokens": 4096,
+    "InputPricePer1K": 0.0015,
+    "OutputPricePer1K": 0.002,
+    "Encoding": "cl100k_base"
+  },
+  {
+    "Id": "gemini-1.5-pro",
+    "Provider": "Google",
+    "MaxTokens": 128000,
+    "InputPricePer1K": 0.0025,
+    "OutputPricePer1K": 0.0075,
+    "Encoding": "text-bpe"
+  },
+  {
+    "Id": "gemini-1.5-flash",
+    "Provider": "Google",
+    "MaxTokens": 128000,
+    "InputPricePer1K": 0.00015,
+    "OutputPricePer1K": 0.00060,
+    "Encoding": "text-bpe"
   }
 ]
+

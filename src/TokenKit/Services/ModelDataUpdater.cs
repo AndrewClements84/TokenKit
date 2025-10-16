@@ -18,22 +18,10 @@ public class ModelDataUpdater
             Directory.CreateDirectory(directory!);
     }
 
-    public async Task UpdateAsync(bool useScraper = true)
+    public async Task UpdateAsync(string? openAiApiKey = null)
     {
-        List<ModelSpec> updatedModels;
-
-        if (useScraper)
-        {
-            var scraper = new ModelDataScraper();
-            updatedModels = await scraper.FetchAllAsync();
-        }
-        else
-        {
-            updatedModels = new()
-        {
-            new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 128000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" }
-        };
-        }
+        var scraper = new ModelDataScraper();
+        var updatedModels = await scraper.FetchOpenAIModelsAsync(openAiApiKey);
 
         var json = JsonSerializer.Serialize(updatedModels, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(_dataPath, json);
