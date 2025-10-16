@@ -1,12 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using TokenKit.CLI;
 
-namespace TokenKit
-{
-    internal class Program
-    {
-    }
-}
+await TokenKitCLI.RunAsync(args);
