@@ -14,6 +14,7 @@
 | 🔄 **Model Registry** | Maintain up-to-date model metadata (`maxTokens`, pricing, encodings, etc.) |
 | 🧩 **CLI & SDK** | Use TokenKit as a .NET library *or* a standalone global CLI |
 | 📦 **Self-contained** | All data stored in `Registry/models.data.json`, auto-updated via command |
+| 🌐 **Optional Live Scraper** | Fetch the latest OpenAI model data using an API key, or use trusted fallback data |
 
 ---
 
@@ -55,7 +56,7 @@ tokenkit analyze "Hello from TokenKit!" --model gpt-4o
 
 ### 2️⃣ Analyze File Input
 ```bash
-tokenkit analyze prompt.txt --model claude-3
+tokenkit analyze prompt.txt --model gpt-4o
 ```
 
 ---
@@ -84,10 +85,16 @@ tokenkit validate "A very long prompt to validate" --model gpt-4o
 
 ### 5️⃣ Update Model Data
 
-#### Default Update
+#### Default Update (No API Key)
 Fetch the latest built-in model metadata:
 ```bash
 tokenkit update-models
+```
+
+#### Update Using OpenAI API Key
+Use your OpenAI key to fetch live model data from the `/v1/models` endpoint:
+```bash
+tokenkit update-models --openai-key sk-xxxx
 ```
 
 #### Update from JSON (stdin)
@@ -108,6 +115,26 @@ cat newmodels.json | tokenkit update-models
     "Encoding": "cl100k_base"
   }
 ]
+```
+
+---
+
+### 6️⃣ Scrape Model Data (Preview Only)
+
+Fetch latest OpenAI model data (does not overwrite your registry):
+```bash
+tokenkit scrape-models --openai-key sk-xxxx
+```
+
+If no key is provided, TokenKit falls back to its offline model list.
+
+**Example Output:**
+```
+🔍 Fetching latest OpenAI model data...
+✅ Retrieved 3 models:
+  - OpenAI: gpt-4o (128000 tokens)
+  - OpenAI: gpt-4o-mini (64000 tokens)
+  - OpenAI: gpt-3.5-turbo (4096 tokens)
 ```
 
 ---
@@ -140,8 +167,10 @@ Each entry contains:
 |----------|--------------|
 | `tokenkit analyze "<text | path>" --model <model-id>` | Analyze and count tokens for inline text, file, or stdin input |
 | `tokenkit validate "<text | path>" --model <model-id>` | Validate prompt against model token limits |
-| `tokenkit update-models` | Update local registry using default source |
-| `cat newmodels.json | tokenkit update-models` | Update registry from piped JSON |
+| `tokenkit update-models` | Update local registry using default fallback data |
+| `tokenkit update-models --openai-key <key>` | Update registry using OpenAI API (requires valid key) |
+| `cat newmodels.json | tokenkit update-models` | Update registry from piped JSON input |
+| `tokenkit scrape-models [--openai-key <key>]` | Fetch and preview OpenAI model data without saving |
 | `tokenkit --help` | Display CLI usage guide |
 
 ---
@@ -196,7 +225,7 @@ TokenKit/
 - [x] CLI for `analyze`, `validate`, and `update-models`  
 - [x] Stdin + file + inline input support  
 - [x] Model registry auto-load and safe paths  
-- [ ] Live model scraping from OpenAI / Anthropic / Gemini APIs  
+- [x] Live model scraping from OpenAI (optional API key)  
 - [ ] Add `tokenkit models list` command  
 - [ ] Optional SharpToken / Microsoft.ML.Tokenizers integration  
 - [ ] Publish stable v1.0.0 to NuGet + dotnet tool feed  
