@@ -18,14 +18,22 @@ public class ModelDataUpdater
             Directory.CreateDirectory(directory!);
     }
 
-    public async Task UpdateAsync()
+    public async Task UpdateAsync(bool useScraper = true)
     {
-        // Example: dummy new model data
-        var updatedModels = new List<ModelSpec>
+        List<ModelSpec> updatedModels;
+
+        if (useScraper)
         {
-            new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 128000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" },
-            new() { Id = "claude-3-opus", Provider = "Anthropic", MaxTokens = 200000, InputPricePer1K = 0.008m, OutputPricePer1K = 0.024m, Encoding = "anthropic-v1" }
+            var scraper = new ModelDataScraper();
+            updatedModels = await scraper.FetchAllAsync();
+        }
+        else
+        {
+            updatedModels = new()
+        {
+            new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 128000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" }
         };
+        }
 
         var json = JsonSerializer.Serialize(updatedModels, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(_dataPath, json);

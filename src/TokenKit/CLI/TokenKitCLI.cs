@@ -27,6 +27,9 @@ public static class TokenKitCLI
             case "update-models":
                 await UpdateModelsAsync();
                 break;
+            case "scrape-models":
+                await ScrapeModelsAsync();
+                break;
             case "--help":
             case "-h":
             default:
@@ -55,6 +58,8 @@ public static class TokenKitCLI
         🔄 Model Updates:
           • Fetch or replace model data:
               tokenkit update-models
+          • Scrape latest model data (without saving):
+              tokenkit scrape-models
           • Pipe JSON directly (stdin):
               cat newmodels.json | tokenkit update-models
 
@@ -207,6 +212,34 @@ public static class TokenKitCLI
         {
             await updater.UpdateAsync();
             Console.WriteLine("✅ Model data updated successfully from default source.");
+        }
+    }
+
+    private static async Task ScrapeModelsAsync()
+    {
+        Console.WriteLine("🔍 Fetching latest model data from providers...");
+
+        try
+        {
+            var scraper = new ModelDataScraper();
+            var models = await scraper.FetchAllAsync();
+
+            if (models.Count == 0)
+            {
+                Console.WriteLine("⚠️ No models retrieved (possibly offline or API unavailable).");
+                return;
+            }
+
+            Console.WriteLine($"✅ Retrieved {models.Count} models:");
+            foreach (var m in models)
+                Console.WriteLine($"  - {m.Provider}: {m.Id} ({m.MaxTokens} tokens)");
+
+            Console.WriteLine("\nTo save these models locally, run:");
+            Console.WriteLine("  tokenkit update-models");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Failed to scrape models: {ex.Message}");
         }
     }
 }
