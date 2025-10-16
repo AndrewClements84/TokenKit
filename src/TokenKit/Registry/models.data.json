@@ -1,0 +1,10 @@
+﻿[
+  {
+    "Id": "gpt-4o",
+    "Provider": "OpenAI",
+    "MaxTokens": 128000,
+    "InputPricePer1K": 0.005,
+    "OutputPricePer1K": 0.015,
+    "Encoding": "cl100k_base"
+  }
+]
