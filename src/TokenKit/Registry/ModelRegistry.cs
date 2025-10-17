@@ -1,8 +1,10 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using TokenKit.Models;
 
 namespace TokenKit.Registry;
 
+[ExcludeFromCodeCoverage]
 public static class ModelRegistry
 {
     private static readonly Lazy<List<ModelSpec>> _models = new(() =>

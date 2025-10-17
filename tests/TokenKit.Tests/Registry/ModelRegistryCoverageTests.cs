@@ -1,5 +1,4 @@
 ﻿using TokenKit.Registry;
-using TokenKit.Models;
 
 namespace TokenKit.Tests.Registry
 {
