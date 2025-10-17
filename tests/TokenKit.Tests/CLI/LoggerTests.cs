@@ -78,17 +78,41 @@ namespace TokenKit.Tests.CLI
         [Fact]
         public void ShouldTruncateLog_WhenExceedsOneMB()
         {
-            // Arrange — create a large dummy log file
-            var largeLines = string.Join(Environment.NewLine, Enumerable.Repeat("X", 150000));
-            File.WriteAllText(_logFile, largeLines);
+            // Keep console quiet so file I/O is deterministic
+            Logger.QuietMode = true;
 
-            // Act
+            // Build a log file just over 1 MB with MANY numbered lines
+            // so File.ReadAllLines(...) returns a large array we can verify.
+            var payload = new string('X', 80);
+            using (var sw = new StreamWriter(_logFile, false))
+            {
+                int i = 0;
+                while (new FileInfo(_logFile).Length <= 1_050_000) // a bit above 1MB to guarantee the branch
+                {
+                    sw.WriteLine($"LINE {i:D6} {payload}");
+                    i++;
+                    if (i % 1000 == 0) sw.Flush(); // help file size update during loop
+                }
+            }
+
+            var beforeLines = File.ReadAllLines(_logFile).Length;
+            Assert.True(beforeLines > 0, "Precondition: file should contain lines");
+
+            // Act: write one more entry -> triggers truncation branch
             Logger.Info("trigger truncate");
 
-            // Assert file shrinks roughly in half
-            var newSize = new FileInfo(_logFile).Length;
-            Assert.True(newSize < 1_000_000);
-            Assert.Contains("trigger truncate", File.ReadAllText(_logFile));
+            // Assert: line count should be roughly half + the appended line
+            var afterLines = File.ReadAllLines(_logFile);
+            Assert.True(afterLines.Length < beforeLines, "Log file should have been truncated");
+            Assert.InRange(afterLines.Length, beforeLines / 2, beforeLines / 2 + 100);
+
+            // Earliest lines should be gone; appended line should be present
+            Assert.DoesNotContain(afterLines, l => l.Contains("LINE 000000"));
+            Assert.Contains(afterLines, l => l.Contains("trigger truncate"));
+
+            // Reset quiet mode for other tests
+            Logger.QuietMode = false;
         }
+
     }
 }
