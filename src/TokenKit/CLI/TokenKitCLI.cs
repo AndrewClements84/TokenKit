@@ -1,11 +1,12 @@
-﻿using System.Text.Json;
-using System.Diagnostics;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using TokenKit.Models;
-using TokenKit.Services;
 using TokenKit.Registry;
+using TokenKit.Services;
 
 namespace TokenKit.CLI;
 
+[ExcludeFromCodeCoverage]
 public static class TokenKitCLI
 {
     // Global flags so subcommands can access them

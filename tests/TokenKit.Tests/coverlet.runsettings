@@ -7,6 +7,7 @@
           <!-- Exclude specific files -->
           <ExcludeByFile>
 			  **/ModelRegistry.cs
+			  **/TokenKitCLI.cs
 		  </ExcludeByFile>
         </Configuration>
       </DataCollector>
