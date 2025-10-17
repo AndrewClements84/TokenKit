@@ -15,4 +15,9 @@
 		<None Include="Registry\models.data.json" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.ML.Tokenizers" Version="1.0.2" />
+	  <PackageReference Include="SharpToken" Version="2.0.3" />
+	</ItemGroup>
+
 </Project>

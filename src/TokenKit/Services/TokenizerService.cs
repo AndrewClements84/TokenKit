@@ -1,18 +1,35 @@
-﻿using TokenKit.Models;
+﻿using System.Diagnostics;
+using TokenKit.Services.Encoders;
 
 namespace TokenKit.Services;
 
 public class TokenizerService
 {
-    public TokenizationResult Analyze(string input, string modelId)
+    private readonly ITextEncoder _encoder;
+
+    public TokenizerService(string engineName = "simple")
     {
-        var tokens = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return new TokenizationResult
+        _encoder = CreateEncoder(engineName);
+        Debug.WriteLine($"[TokenizerService] Using encoder: {_encoder.Name}");
+    }
+
+    private static ITextEncoder CreateEncoder(string engine)
+    {
+        switch (engine.ToLowerInvariant())
         {
-            ModelId = modelId,
-            TokenCount = tokens.Length,
-            Tokens = tokens
-        };
+            case "sharptoken":
+                return new SharpTokenEncoder();
+            case "mltokenizers":
+            case "ml":
+                return new MLTokenizersEncoder();
+            default:
+                return new SimpleTextEncoder();
+        }
+    }
+
+    public (int TokenCount, string Engine) Analyze(string text, string modelId)
+    {
+        var count = _encoder.CountTokens(text);
+        return (count, _encoder.Name);
     }
 }
-

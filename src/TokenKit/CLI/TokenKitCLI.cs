@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Diagnostics;
 using TokenKit.Models;
 using TokenKit.Services;
 using TokenKit.Registry;
@@ -43,11 +44,11 @@ public static class TokenKitCLI
         Console.WriteLine("""
         🧠 TokenKit CLI — Tokenization & Validation Toolkit for LLMs
         ------------------------------------------------------------
-        Easily analyze, validate, and update model metadata from the terminal.
+        Analyze, validate, or update model metadata directly from your terminal.
 
         📘 Usage:
-          tokenkit analyze "<text | path>" --model <model-id>
-          tokenkit validate "<text | path>" --model <model-id>
+          tokenkit analyze "<text | path>" --model <model-id> [--engine <engine>]
+          tokenkit validate "<text | path>" --model <model-id> [--engine <engine>]
           tokenkit update-models [--openai-key <key>]
           tokenkit scrape-models [--openai-key <key>]
 
@@ -56,18 +57,26 @@ public static class TokenKitCLI
           • From file    →  tokenkit analyze prompt.txt --model gpt-4o
           • From stdin   →  echo "Hello world!" | tokenkit analyze --model gpt-4o
 
+        ⚙️ Encoder Options:
+          • Use the built-in whitespace encoder (default):
+              tokenkit analyze "Text" --model gpt-4o --engine simple
+          • Use SharpToken (TikToken-compatible):
+              tokenkit analyze "Text" --model gpt-4o --engine sharptoken
+          • Use Microsoft.ML.Tokenizers:
+              tokenkit analyze "Text" --model gpt-4o --engine mltokenizers
+
         🔄 Model Updates:
-          • Fetch or replace model data:
+          • Update from local defaults:
               tokenkit update-models
-          • Scrape latest model data (without saving):
-              tokenkit scrape-models
-          • Pipe JSON directly (stdin):
-              cat newmodels.json | tokenkit update-models
           • Update using OpenAI API key:
               tokenkit update-models --openai-key sk-xxxx
+          • Scrape live model list (without saving):
+              tokenkit scrape-models [--openai-key sk-xxxx]
+          • Update via piped JSON:
+              cat newmodels.json | tokenkit update-models
 
         🧾 Output:
-          JSON-formatted summary including token count, estimated cost, and validation status.
+          JSON-formatted summary including token count, estimated cost, engine name, and validation status.
 
         ------------------------------------------------------------
         Version 1.0.0  |  © 2025 Flow Labs
@@ -76,7 +85,6 @@ public static class TokenKitCLI
 
     private static async Task AnalyzeAsync(string[] args)
     {
-        // Detect piped input
         string? pipedInput = null;
         if (Console.IsInputRedirected)
         {
@@ -88,6 +96,14 @@ public static class TokenKitCLI
         var modelId = (modelFlagIndex >= 0 && modelFlagIndex + 1 < args.Length)
             ? args[modelFlagIndex + 1]
             : "gpt-4o";
+
+        // Detect optional --engine flag
+        var engineFlagIndex = Array.IndexOf(args, "--engine");
+        var engineName = (engineFlagIndex >= 0 && engineFlagIndex + 1 < args.Length)
+            ? args[engineFlagIndex + 1]
+            : "simple";
+
+        Debug.WriteLine($"[TokenKitCLI] Selected engine: {engineName}");
 
         string text;
 
@@ -109,7 +125,7 @@ public static class TokenKitCLI
             return;
         }
 
-        var tokenizer = new TokenizerService();
+        var tokenizer = new TokenizerService(engineName);
         var result = tokenizer.Analyze(text, modelId);
 
         var model = ModelRegistry.Get(modelId);
@@ -127,6 +143,7 @@ public static class TokenKitCLI
             Provider = model.Provider,
             result.TokenCount,
             EstimatedCost = cost,
+            Engine = result.Engine,
             Valid = result.TokenCount <= model.MaxTokens
         };
 
@@ -147,6 +164,14 @@ public static class TokenKitCLI
             ? args[modelFlagIndex + 1]
             : "gpt-4o";
 
+        // Detect optional --engine flag
+        var engineFlagIndex = Array.IndexOf(args, "--engine");
+        var engineName = (engineFlagIndex >= 0 && engineFlagIndex + 1 < args.Length)
+            ? args[engineFlagIndex + 1]
+            : "simple";
+
+        Debug.WriteLine($"[TokenKitCLI] Selected engine: {engineName}");
+
         string text;
 
         if (!string.IsNullOrWhiteSpace(pipedInput))
@@ -167,12 +192,23 @@ public static class TokenKitCLI
             return;
         }
 
-        var tokenizer = new TokenizerService();
+        var tokenizer = new TokenizerService(engineName);
         var result = tokenizer.Analyze(text, modelId);
         var model = ModelRegistry.Get(modelId)!;
 
         var validation = new ValidationService().Validate(model, result.TokenCount);
-        Console.WriteLine(JsonSerializer.Serialize(validation, new JsonSerializerOptions { WriteIndented = true }));
+
+        var output = new
+        {
+            Model = model.Id,
+            Provider = model.Provider,
+            result.TokenCount,
+            Engine = result.Engine,
+            validation.IsValid,
+            validation.Message
+        };
+
+        Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private static async Task UpdateModelsAsync(string[] args)
@@ -184,7 +220,6 @@ public static class TokenKitCLI
             pipedInput = pipedInput.Trim();
         }
 
-        // Detect optional --openai-key argument
         string? openAiKey = null;
         var keyIndex = Array.IndexOf(args, "--openai-key");
         if (keyIndex >= 0 && keyIndex + 1 < args.Length)
@@ -223,7 +258,6 @@ public static class TokenKitCLI
     {
         Console.WriteLine("🔍 Fetching latest OpenAI model data...");
 
-        // Detect optional --openai-key argument
         string? openAiKey = null;
         var keyIndex = Array.IndexOf(args, "--openai-key");
         if (keyIndex >= 0 && keyIndex + 1 < args.Length)

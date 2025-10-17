@@ -10,7 +10,7 @@ public class TokenizerTests
         var result = service.Analyze("Hello world from TokenKit", "gpt-4o");
 
         Assert.Equal(4, result.TokenCount);
-        Assert.Equal("gpt-4o", result.ModelId);
+        Assert.Equal("SimpleTokenizer", result.Engine); // since default encoder
     }
 
     [Fact]
