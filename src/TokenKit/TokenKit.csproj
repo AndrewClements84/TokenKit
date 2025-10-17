@@ -12,7 +12,10 @@
     <Version>1.0.0</Version>
     <Authors>AndrewClements84</Authors>
     <Company>AndrewClements84</Company>
-    <Description>TokenKit — Lightweight CLI and SDK for LLM tokenization, validation and model cost estimation.</Description>
+	  <Description>
+		  TokenKit — a .NET toolkit for tokenization, cost estimation, and AI model registry management.
+		  Supports GPT-4, GPT-4o, GPT-5, and other LLMs with Microsoft.ML.Tokenizers and SharpToken integration.
+	  </Description>
     <RepositoryUrl>https://github.com/AndrewClements84/TokenKit</RepositoryUrl>
     <PackageProjectUrl>https://github.com/AndrewClements84/TokenKit</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
