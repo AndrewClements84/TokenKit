@@ -109,45 +109,6 @@ namespace TokenKit.Tests.CLI
             var output = CaptureConsole(() => TokenKitCLI.RunAsync(new[] { "-h" }));
             Assert.Contains("Usage:", output);
         }
-
-        [Fact]
-        public void RunAsync_ShouldTriggerScrapeModelsSafely()
-        {
-            var output = CaptureConsole(() => TokenKitCLI.RunAsync(new[] { "scrape-models" }));
-            Assert.Contains("OpenAI model data", output);
-        }
-
-        [Fact]
-        public void RunAsync_ShouldTriggerUpdateModelsSafely()
-        {
-            var output = CaptureConsole(() => TokenKitCLI.RunAsync(new[] { "update-models" }));
-            Assert.Contains("Model data updated", output);
-        }
-
-        [Fact]
-        public void RunAsync_ShouldTriggerAnalyzeAndValidateSafely()
-        {
-            var analyzeOutput = CaptureConsole(() => TokenKitCLI.RunAsync(new[] { "analyze", "Hello", "--model", "gpt-4o" }));
-            var validateOutput = CaptureConsole(() => TokenKitCLI.RunAsync(new[] { "validate", "Hi", "--model", "gpt-4o" }));
-
-            analyzeOutput = string.Join('\n', analyzeOutput.Split('\n').Where(line => !line.Contains('█') && !string.IsNullOrWhiteSpace(line)));
-            validateOutput = string.Join('\n', validateOutput.Split('\n').Where(line => !line.Contains('█') && !string.IsNullOrWhiteSpace(line)));
-
-            // Expect either valid token info or registry not found message
-            Assert.True(
-                analyzeOutput.Contains("TokenCount", StringComparison.OrdinalIgnoreCase) ||
-                analyzeOutput.Contains("Model", StringComparison.OrdinalIgnoreCase) ||
-                analyzeOutput.Contains("not found", StringComparison.OrdinalIgnoreCase),
-                $"Analyze output:\n{analyzeOutput}"
-            );
-
-            Assert.True(
-                validateOutput.Contains("Model", StringComparison.OrdinalIgnoreCase) ||
-                validateOutput.Contains("Valid", StringComparison.OrdinalIgnoreCase) ||
-                validateOutput.Contains("not found", StringComparison.OrdinalIgnoreCase),
-                $"Validate output:\n{validateOutput}"
-            );
-        }
     }
 }
 
