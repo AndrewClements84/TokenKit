@@ -1,5 +1,7 @@
 ﻿using System.Net;
+using System.Net.Http;
 using System.Text.Json;
+using TokenKit.Models;
 using TokenKit.Services;
 
 namespace TokenKit.Tests.Services
@@ -72,7 +74,6 @@ namespace TokenKit.Tests.Services
             var scraper = new ModelDataScraper(new HttpClient(handler));
             var result = await scraper.FetchOpenAIModelsAsync("sk-test-key");
 
-            // fallback because there were no gpt-* models
             Assert.NotNull(result);
             Assert.True(result.Count >= 3);
             Assert.Contains(result, m => m.Id == "gpt-4o");
@@ -89,6 +90,35 @@ namespace TokenKit.Tests.Services
             Assert.NotNull(result);
             Assert.True(result.Count >= 3);
         }
+
+        [Fact]
+        public async Task FetchOpenAIModelsAsync_ShouldHandleNullIdProperty()
+        {
+            // Arrange JSON with one null id and one valid gpt-* id
+            var json = JsonSerializer.Serialize(new
+            {
+                data = new[]
+                {
+                    new { id = (string?)null },
+                    new { id = "gpt-4o" }
+                }
+            });
+
+            var handler = new FakeHandler(_ =>
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(json)
+                });
+
+            var scraper = new ModelDataScraper(new HttpClient(handler));
+
+            // Act
+            var result = await scraper.FetchOpenAIModelsAsync("sk-test-key");
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Contains(result, m => m.Id == "gpt-4o");
+            // The null id path triggers the ?? "" fallback without exception
+        }
     }
 }
-
