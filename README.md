@@ -219,6 +219,40 @@ TokenKit/
 
 ---
 
+
+---
+
+## ⚙️ Phase 6 Additions (Advanced Tokenization & CLI UX)
+
+| Feature | Description |
+|----------|-------------|
+| 🧩 **Multi-Encoder Support** | TokenKit now supports multiple tokenization engines via the `--engine` flag (`simple`, `sharptoken`, `mltokenizers`). |
+| ⚙️ **CLI Runtime Switching** | Analyze or validate text using any supported encoder on demand. |
+| 📦 **`models list` Command** | View all registered models (provider, ID, token limits, pricing) in a clean tabular view. |
+| 🔍 **Provider Filtering** | Use `tokenkit models list --provider OpenAI` to filter models by provider (case-insensitive). |
+| 🧪 **Multi-Engine Tests** | Added xUnit tests verifying token count consistency across encoders. |
+| ⚠️ **Disclaimer** | TokenKit provides cost estimates and token counts based on available model data. The author is **not responsible** for legacy, outdated, or provider-changed calculation differences. |
+
+### 🧠 Example Usage
+
+#### List all models
+```bash
+tokenkit models list
+```
+
+#### Filter by provider (case-insensitive)
+```bash
+tokenkit models list --provider openai
+tokenkit models list --provider Anthropic
+```
+
+#### Analyze with a specific encoder
+```bash
+tokenkit analyze "Hello from TokenKit" --model gpt-4o --engine sharptoken
+```
+
+---
+
 ## 🗺️ Roadmap
 
 - [x] Tokenization, cost, and validation services  
