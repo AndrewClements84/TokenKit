@@ -17,7 +17,11 @@
     <PackageProjectUrl>https://github.com/AndrewClements84/TokenKit</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>LLM;Tokenization;CLI;AI;Prompt;SDK;ToolKit;Validation</PackageTags>
+    <PackageTags>
+		tokenizer;tokenization;gpt;gpt4;gpt5;openai;ai;llm;anthropic;claude;
+		nlp;language-model;tokens;cost-estimation;usage-tracking;prompt;prompting;
+		model-registry;developer-tools;dotnet;net;cli;ai-toolkit
+	</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
