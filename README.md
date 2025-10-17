@@ -1,4 +1,4 @@
-[![.NET Build, Test & Publish](https://github.com/AndrewClements84/TokenKit/actions/workflows/dotnet.yml/badge.svg)](https://github.com/AndrewClements84/TokenKit/actions/workflows/dotnet.yml)
+[![Build](https://github.com/AndrewClements84/TokenKit/actions/workflows/dotnet.yml/badge.svg?branch=master)](https://github.com/AndrewClements84/TokenKit/actions)
 [![NuGet](https://img.shields.io/nuget/v/TokenKit.svg?style=flat&logo=nuget&label=NuGet)](https://www.nuget.org/packages/TokenKit/)
 [![Codecov](https://codecov.io/gh/AndrewClements84/TokenKit/branch/master/graph/badge.svg?style=flat&logo=codecov&label=Coverage)](https://app.codecov.io/gh/AndrewClements84/TokenKit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=flat)](https://opensource.org/licenses/MIT)
