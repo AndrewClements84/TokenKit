@@ -1,3 +1,9 @@
+[![Build](https://img.shields.io/github/actions/workflow/status/AndrewClements84/TokenKit/dotnet.yml?branch=master&label=Build&style=flat&logo=github)](https://github.com/AndrewClements84/TokenKit/actions)
+[![NuGet](https://img.shields.io/nuget/v/TokenKit.svg?style=flat&logo=nuget&label=NuGet)](https://www.nuget.org/packages/TokenKit/)
+[![Codecov](https://img.shields.io/codecov/c/github/AndrewClements84/TokenKit?logo=codecov&style=flat&token=<your_token_if_needed>&label=Coverage)](https://app.codecov.io/gh/AndrewClements84/TokenKit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=flat)](https://opensource.org/licenses/MIT)
+
+
 # 🧠 TokenKit
 
 > **TokenKit** — A lightweight .NET 8.0 library and CLI tool for unified **tokenization**, **validation**, and **model registry management** across multiple LLM providers (OpenAI, Anthropic, Gemini, etc.)
