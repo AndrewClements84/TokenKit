@@ -6,9 +6,12 @@
         <Configuration>
           <!-- Exclude specific files -->
           <ExcludeByFile>
-            **/ModelRegistry.cs
-            **/Program.cs
-          </ExcludeByFile>
+			  **/ModelRegistry.cs
+			  **/Program.cs
+			  **/Program.g.cs
+			  **/TokenKit/Program.cs
+			  **/TokenKit/Program.g.cs
+		  </ExcludeByFile>
         </Configuration>
       </DataCollector>
     </DataCollectors>
