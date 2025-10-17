@@ -34,6 +34,10 @@ public static class TokenKitCLI
             case "models":
                 await HandleModelsCommandAsync(args);
                 break;
+            case "--version":
+            case "-v":
+                ShowVersion();
+                break;
             case "--help":
             case "-h":
             default:
@@ -359,5 +363,12 @@ public static class TokenKitCLI
         {
             Console.WriteLine($"❌ Failed to scrape models: {ex.Message}");
         }
+    }
+
+    private static void ShowVersion()
+    {
+        var version = typeof(TokenKitCLI).Assembly
+            .GetName().Version?.ToString() ?? "unknown";
+        Console.WriteLine($"TokenKit CLI version {version}");
     }
 }

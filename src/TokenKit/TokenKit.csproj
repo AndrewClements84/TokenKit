@@ -5,7 +5,25 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>tokenkit</ToolCommandName>
+    <PackageOutputPath>../nupkg</PackageOutputPath>
+    <PackageId>TokenKit</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>AndrewClements84</Authors>
+    <Company>AndrewClements84</Company>
+    <Description>TokenKit — Lightweight CLI and SDK for LLM tokenization, validation and model cost estimation.</Description>
+    <RepositoryUrl>https://github.com/AndrewClements84/TokenKit</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/AndrewClements84/TokenKit</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>LLM;Tokenization;CLI;AI;Prompt;SDK;ToolKit;Validation</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="" />
+    <None Include="../../assets/logo.png" Pack="true" PackagePath="assets/" />
+  </ItemGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Include="Registry\models.data.json" />
