@@ -276,3 +276,103 @@ tokenkit analyze "Hello from TokenKit" --model gpt-4o --engine sharptoken
 
 Licensed under the [MIT License](LICENSE).  
 © 2025 Andrew Clements
+
+
+---
+
+## 🎨 Phase 8 — CLI Polish, Logging & Automation Support
+
+| Feature | Description |
+|----------|-------------|
+| 🧾 **Colorized Output** | All CLI commands now use `ConsoleStyler` for clear, color-coded feedback (green ✅, yellow ⚠️, red ❌). |
+| 🤫 **Quiet Mode (`--quiet`)** | Suppresses console output while still writing structured logs to `tokenkit.log`. Ideal for CI/CD pipelines. |
+| ⚙️ **Structured Logging** | Every operation is logged with timestamps and severity in `tokenkit.log` (auto-rotating, max 1MB). |
+| 🧩 **JSON Mode (`--json`)** | Outputs raw JSON (no colors or emojis) for automation and machine-readable workflows. |
+| 🧠 **ASCII Banner** | TokenKit now includes a startup banner and version info header for professional CLI presentation. |
+| 🧪 **Enhanced Tests** | Coverage expanded to include encoders, CLI output modes, and logging behavior. |
+
+---
+
+## 🧪 Extended CLI Examples
+
+### 🔹 Standard Analysis
+```bash
+tokenkit analyze "Hello from TokenKit!" --model gpt-4o
+```
+✅ Produces colorized JSON summary + log entry.
+
+### 🔹 JSON Mode (Automation / CI)
+```bash
+tokenkit analyze "Hello world" --model gpt-4o --json
+```
+Outputs pure JSON only, suppressing banner and emojis:
+```json
+{
+  "Model": "gpt-4o",
+  "Provider": "OpenAI",
+  "TokenCount": 7,
+  "EstimatedCost": 0.000105,
+  "Engine": "simple",
+  "Valid": true
+}
+```
+
+### 🔹 Quiet Mode (Log Only)
+```bash
+tokenkit analyze "Silent test" --model gpt-4o --quiet
+```
+No console output. Log file receives entries like:
+```
+2025-10-17 22:43:15 [INFO] Analyze started with model=gpt-4o
+2025-10-17 22:43:15 [SUCCESS] Analyzed 7 tokens using simple (gpt-4o)
+```
+
+### 🔹 Model Listing with JSON
+```bash
+tokenkit models list --json
+```
+
+---
+
+## 📜 Logs
+
+All CLI runs write to `tokenkit.log` (auto-rotated at 1 MB).  
+You can find it under your TokenKit working directory, e.g.:
+```
+src/TokenKit/bin/Debug/net8.0/tokenkit.log
+```
+
+---
+
+## 📈 Code Coverage
+
+TokenKit targets **100% test coverage** with xUnit and Codecov integration.  
+Run coverage locally:
+
+```bash
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+View detailed results in Codecov:  
+[![Codecov](https://codecov.io/gh/AndrewClements84/TokenKit/branch/master/graph/badge.svg)](https://app.codecov.io/gh/AndrewClements84/TokenKit)
+
+---
+
+## 🗺️ Updated Roadmap (as of 2025-10-17)
+
+| Phase | Feature | Status |
+|-------|----------|---------|
+| 1 | Core tokenization + cost estimation | ✅ Done |
+| 2 | Validation logic | ✅ Done |
+| 3 | Model registry (JSON-based) | ✅ Done |
+| 4 | CLI commands (`analyze`, `validate`, `update-models`) | ✅ Done |
+| 5 | Scraper service (OpenAI API optional) | ✅ Done |
+| 6 | Advanced encoders (`SharpToken`, `ML.Tokenizers`) | ✅ Done |
+| 7 | Tests + Codecov integration | ✅ Done |
+| 8 | CLI polish (`--json`, `--quiet`, logging, banner) | ✅ Done |
+| 9 | NuGet + global CLI release (v1.0.0) | 🔄 Pending Release |
+
+---
+
+© 2025 Andrew Clements — MIT License  
+Flow Labs / TokenKit — https://github.com/AndrewClements84/TokenKit
