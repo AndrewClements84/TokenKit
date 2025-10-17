@@ -17,6 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="SharpToken" Version="2.0.3" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="1.0.2" />
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\TokenKit\TokenKit.csproj" />
   </ItemGroup>
 
