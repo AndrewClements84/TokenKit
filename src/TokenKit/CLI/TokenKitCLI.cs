@@ -31,6 +31,9 @@ public static class TokenKitCLI
             case "scrape-models":
                 await ScrapeModelsAsync(args);
                 break;
+            case "models":
+                await HandleModelsCommandAsync(args);
+                break;
             case "--help":
             case "-h":
             default:
@@ -51,6 +54,7 @@ public static class TokenKitCLI
           tokenkit validate "<text | path>" --model <model-id> [--engine <engine>]
           tokenkit update-models [--openai-key <key>]
           tokenkit scrape-models [--openai-key <key>]
+          tokenkit models list
 
         💡 Input Options:
           • Inline text  →  tokenkit analyze "Hello world!" --model gpt-4o
@@ -58,30 +62,100 @@ public static class TokenKitCLI
           • From stdin   →  echo "Hello world!" | tokenkit analyze --model gpt-4o
 
         ⚙️ Encoder Options:
-          • Use the built-in whitespace encoder (default):
-              tokenkit analyze "Text" --model gpt-4o --engine simple
-          • Use SharpToken (TikToken-compatible):
-              tokenkit analyze "Text" --model gpt-4o --engine sharptoken
-          • Use Microsoft.ML.Tokenizers:
-              tokenkit analyze "Text" --model gpt-4o --engine mltokenizers
+          • Built-in (default):       --engine simple
+          • SharpToken (TikToken):    --engine sharptoken
+          • Microsoft ML Tokenizers:  --engine mltokenizers
 
-        🔄 Model Updates:
-          • Update from local defaults:
-              tokenkit update-models
-          • Update using OpenAI API key:
-              tokenkit update-models --openai-key sk-xxxx
-          • Scrape live model list (without saving):
-              tokenkit scrape-models [--openai-key sk-xxxx]
-          • Update via piped JSON:
-              cat newmodels.json | tokenkit update-models
-
-        🧾 Output:
-          JSON-formatted summary including token count, estimated cost, engine name, and validation status.
+        🔍 Model Commands:
+          • List all models in registry:
+              tokenkit models list
+          • Filter by provider (coming soon):
+              tokenkit models list --provider OpenAI
 
         ------------------------------------------------------------
         Version 1.0.0  |  © 2025 Flow Labs
         """);
     }
+
+    // -----------------------------
+    // NEW: Models command handling
+    // -----------------------------
+    private static async Task HandleModelsCommandAsync(string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Console.WriteLine("❌ Missing subcommand. Use: tokenkit models list");
+            return;
+        }
+
+        var subcommand = args[1].ToLowerInvariant();
+        switch (subcommand)
+        {
+            case "list":
+                string? providerFilter = null;
+                var providerIndex = Array.IndexOf(args, "--provider");
+                if (providerIndex >= 0 && providerIndex + 1 < args.Length)
+                    providerFilter = args[providerIndex + 1];
+
+                ListModels(providerFilter);
+                break;
+
+            default:
+                Console.WriteLine($"❌ Unknown subcommand '{subcommand}'. Try: tokenkit models list");
+                break;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private static void ListModels(string? providerFilter = null)
+    {
+        try
+        {
+            var models = ModelRegistry.GetAll();
+            if (models == null || models.Count == 0)
+            {
+                Console.WriteLine("⚠️ No models found in registry.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(providerFilter))
+            {
+                models = models
+                    .Where(m => m.Provider.Equals(providerFilter, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (models.Count == 0)
+                {
+                    Console.WriteLine($"⚠️ No models found for provider '{providerFilter}'.");
+                    return;
+                }
+            }
+
+            Console.WriteLine("📦 Registered Models:");
+            Console.WriteLine("-------------------------------------------------------------");
+            Console.WriteLine($"{"Provider",-12} {"Model ID",-22} {"MaxTokens",10} {"Input/Output (per 1K)",30}");
+            Console.WriteLine("-------------------------------------------------------------");
+
+            foreach (var m in models)
+            {
+                Console.WriteLine(
+                    $"{m.Provider,-12} {m.Id,-22} {m.MaxTokens,10:N0}  " +
+                    $"${m.InputPricePer1K:F4}/${m.OutputPricePer1K:F4}");
+            }
+
+            Console.WriteLine("-------------------------------------------------------------");
+            Console.WriteLine($"Total: {models.Count} {(providerFilter != null ? $"({providerFilter})" : "")} models\n");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Failed to list models: {ex.Message}");
+        }
+    }
+
+    // -----------------------------
+    // Existing functionality
+    // -----------------------------
 
     private static async Task AnalyzeAsync(string[] args)
     {
