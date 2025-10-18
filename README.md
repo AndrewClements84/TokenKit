@@ -4,10 +4,9 @@
 [![Codecov](https://codecov.io/gh/AndrewClements84/TokenKit/branch/master/graph/badge.svg?style=flat&logo=codecov&label=Coverage)](https://app.codecov.io/gh/AndrewClements84/TokenKit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat)](https://opensource.org/licenses/MIT)
 
-
 # 🧠 TokenKit
 
-> **TokenKit** — A lightweight .NET 8.0 library and CLI tool for unified **tokenization**, **validation**, and **model registry management** across multiple LLM providers (OpenAI, Anthropic, Gemini, etc.)
+> **TokenKit** — A professional .NET 8.0 library and CLI for **tokenization**, **validation**, **cost estimation**, and **model registry management** across multiple LLM providers (OpenAI, Anthropic, Gemini, etc.).
 
 ---
 
@@ -15,40 +14,52 @@
 
 | Category | Description |
 |-----------|-------------|
-| 🔢 **Tokenization** | Analyze text or files and count tokens using provider-specific encodings |
-| 💰 **Cost Estimation** | Automatically calculate estimated API cost based on token usage |
-| ✅ **Prompt Validation** | Validate that prompts fit within model context limits |
-| 🔄 **Model Registry** | Maintain up-to-date model metadata (`maxTokens`, pricing, encodings, etc.) |
-| 🧩 **CLI & SDK** | Use TokenKit as a .NET library *or* a standalone global CLI |
-| 📦 **Self-contained** | All data stored in `Registry/models.data.json`, auto-updated via command |
-| 🌐 **Optional Live Scraper** | Fetch the latest OpenAI model data using an API key, or use trusted fallback data |
+| 🔢 **Tokenization** | Analyze text or files and count tokens using multiple encoder engines (`simple`, `SharpToken`, `ML.Tokenizers`) |
+| 💰 **Cost Estimation** | Automatically calculate estimated API cost based on model metadata |
+| ✅ **Prompt Validation** | Validate prompt length against model context limits |
+| 🧩 **Model Registry** | Manage model metadata (`maxTokens`, pricing, encodings, providers) via JSON registry |
+| ⚙️ **CLI & SDK** | Use TokenKit as a .NET library *or* a global CLI tool |
+| 🧮 **Multi-Encoder Support** | Dynamically select tokenization engines via `--engine` flag |
+| 📦 **Self-contained Data** | Local registry stored in `Registry/models.data.json`, auto-updatable |
+| 🔍 **Live Model Scraper** | Optional OpenAI API key support to fetch real-time model data |
+| 📊 **Structured Logging** | All CLI commands logged to `tokenkit.log` with rotation (1MB max) |
+| 🤫 **Quiet & JSON Modes** | Machine-readable (`--json`) and silent (`--quiet`) output modes for automation |
+| 🎨 **CLI Polish** | Colorized output, ASCII banner, and improved user experience |
 
 ---
 
 ## ⚙️ Installation
 
-### 📦 NuGet (Library use)
+### 📦 As a Library (NuGet)
 ```bash
 dotnet add package TokenKit
 ```
 
-### 🧰 Global CLI Tool
+### 💻 As a Global CLI Tool
 ```bash
 dotnet tool install -g TokenKit
 ```
 
 ---
 
-## 🚀 Quick Start (CLI)
+## 🚀 Usage (All-in-One Guide)
 
-Analyze, validate, or update model data directly from your terminal.
-
-### 1️⃣ Analyze Inline Text
+### 🔹 Analyze Inline Text
 ```bash
 tokenkit analyze "Hello from TokenKit!" --model gpt-4o
 ```
 
-**Output:**
+### 🔹 Analyze File Input
+```bash
+tokenkit analyze prompt.txt --model gpt-4o
+```
+
+### 🔹 Pipe Input (stdin)
+```bash
+echo "This is piped text input" | tokenkit analyze --model gpt-4o
+```
+
+**Example Output:**
 ```json
 {
   "Model": "gpt-4o",
@@ -61,26 +72,10 @@ tokenkit analyze "Hello from TokenKit!" --model gpt-4o
 
 ---
 
-### 2️⃣ Analyze File Input
-```bash
-tokenkit analyze prompt.txt --model gpt-4o
-```
-
----
-
-### 3️⃣ Pipe Input (stdin)
-```bash
-echo "This is piped text input" | tokenkit analyze --model gpt-4o
-```
-
----
-
-### 4️⃣ Validate Prompt
+### 🔹 Validate Prompt Length
 ```bash
 tokenkit validate "A very long prompt to validate" --model gpt-4o
 ```
-
-**Output:**
 ```json
 {
   "IsValid": true,
@@ -90,27 +85,41 @@ tokenkit validate "A very long prompt to validate" --model gpt-4o
 
 ---
 
-### 5️⃣ Update Model Data
+### 🔹 List Registered Models
+```bash
+tokenkit models list
+```
 
-#### Default Update (No API Key)
-Fetch the latest built-in model metadata:
+#### Filter by Provider
+```bash
+tokenkit models list --provider openai
+```
+
+#### JSON Output
+```bash
+tokenkit models list --json
+```
+
+---
+
+### 🔹 Update Model Data
+
+#### Default Update (Offline Fallback)
 ```bash
 tokenkit update-models
 ```
 
-#### Update Using OpenAI API Key
-Use your OpenAI key to fetch live model data from the `/v1/models` endpoint:
+#### Using OpenAI API Key
 ```bash
 tokenkit update-models --openai-key sk-xxxx
 ```
 
-#### Update from JSON (stdin)
-Pipe a JSON file with model specs:
+#### From JSON (stdin)
 ```bash
 cat newmodels.json | tokenkit update-models
 ```
 
-**Example `newmodels.json`:**
+**Example Input:**
 ```json
 [
   {
@@ -126,14 +135,12 @@ cat newmodels.json | tokenkit update-models
 
 ---
 
-### 6️⃣ Scrape Model Data (Preview Only)
-
-Fetch latest OpenAI model data (does not overwrite your registry):
+### 🔹 Scrape Latest Model Data (Preview)
 ```bash
 tokenkit scrape-models --openai-key sk-xxxx
 ```
 
-If no key is provided, TokenKit falls back to its offline model list.
+If no key is provided, TokenKit uses the local offline model registry.
 
 **Example Output:**
 ```
@@ -146,43 +153,33 @@ If no key is provided, TokenKit falls back to its offline model list.
 
 ---
 
-## 🧩 Model Registry
+### 🔹 CLI Output Modes
 
-TokenKit stores all known model information in:
-
+#### JSON Mode
+```bash
+tokenkit analyze "Hello" --model gpt-4o --json
 ```
-src/TokenKit/Registry/models.data.json
-```
-
-Each entry contains:
+Outputs pure JSON:
 ```json
 {
-  "Id": "gpt-4o",
+  "Model": "gpt-4o",
   "Provider": "OpenAI",
-  "MaxTokens": 128000,
-  "InputPricePer1K": 0.005,
-  "OutputPricePer1K": 0.015,
-  "Encoding": "cl100k_base"
+  "TokenCount": 7,
+  "EstimatedCost": 0.000105,
+  "Engine": "simple",
+  "Valid": true
 }
 ```
 
----
-
-## 🧮 CLI Command Reference
-
-| Command | Description |
-|----------|--------------|
-| `tokenkit analyze "<text | path>" --model <model-id>` | Analyze and count tokens for inline text, file, or stdin input |
-| `tokenkit validate "<text | path>" --model <model-id>` | Validate prompt against model token limits |
-| `tokenkit update-models` | Update local registry using default fallback data |
-| `tokenkit update-models --openai-key <key>` | Update registry using OpenAI API (requires valid key) |
-| `cat newmodels.json | tokenkit update-models` | Update registry from piped JSON input |
-| `tokenkit scrape-models [--openai-key <key>]` | Fetch and preview OpenAI model data without saving |
-| `tokenkit --help` | Display CLI usage guide |
+#### Quiet Mode
+```bash
+tokenkit analyze "Silent test" --model gpt-4o --quiet
+```
+No console output. Log entry saved to `tokenkit.log`.
 
 ---
 
-## 🧠 Programmatic Use (SDK)
+## 🧩 Programmatic SDK Example
 
 ```csharp
 using TokenKit.Registry;
@@ -199,181 +196,52 @@ Console.WriteLine($"Tokens: {result.TokenCount}, Cost: ${cost}");
 
 ---
 
-## 🧪 Testing
+## 📦 Model Registry
 
-TokenKit includes an **xUnit** test suite with coverage for tokenization, cost estimation, and registry loading.
+TokenKit stores all model metadata in:
+```
+Registry/models.data.json
+```
+Each entry includes:
+```json
+{
+  "Id": "gpt-4o",
+  "Provider": "OpenAI",
+  "MaxTokens": 128000,
+  "InputPricePer1K": 0.005,
+  "OutputPricePer1K": 0.015,
+  "Encoding": "cl100k_base"
+}
+```
 
+---
+
+## 🧪 Testing & Quality Assurance
+
+TokenKit maintains **100% test coverage** using xUnit and Codecov.
+
+Run tests locally:
 ```bash
-dotnet test
+dotnet test --collect:"XPlat Code Coverage"
 ```
 
 ---
 
-## 🛠 Project Structure
-
-```
-TokenKit/
-├── src/
-│   └── TokenKit/
-│       ├── Models/
-│       ├── Services/
-│       ├── Registry/
-│       ├── CLI/
-│       └── Program.cs
-└── tests/
-    └── TokenKit.Tests/
-```
-
----
-
-
----
-
-## ⚙️ Phase 6 Additions (Advanced Tokenization & CLI UX)
+## 🧭 Future Enhancements
 
 | Feature | Description |
 |----------|-------------|
-| 🧩 **Multi-Encoder Support** | TokenKit now supports multiple tokenization engines via the `--engine` flag (`simple`, `sharptoken`, `mltokenizers`). |
-| ⚙️ **CLI Runtime Switching** | Analyze or validate text using any supported encoder on demand. |
-| 📦 **`models list` Command** | View all registered models (provider, ID, token limits, pricing) in a clean tabular view. |
-| 🔍 **Provider Filtering** | Use `tokenkit models list --provider OpenAI` to filter models by provider (case-insensitive). |
-| 🧪 **Multi-Engine Tests** | Added xUnit tests verifying token count consistency across encoders. |
-| ⚠️ **Disclaimer** | TokenKit provides cost estimates and token counts based on available model data. The author is **not responsible** for legacy, outdated, or provider-changed calculation differences. |
-
-### 🧠 Example Usage
-
-#### List all models
-```bash
-tokenkit models list
-```
-
-#### Filter by provider (case-insensitive)
-```bash
-tokenkit models list --provider openai
-tokenkit models list --provider Anthropic
-```
-
-#### Analyze with a specific encoder
-```bash
-tokenkit analyze "Hello from TokenKit" --model gpt-4o --engine sharptoken
-```
-
----
-
-## 🗺️ Roadmap
-
-- [x] Tokenization, cost, and validation services  
-- [x] CLI for `analyze`, `validate`, and `update-models`  
-- [x] Stdin + file + inline input support  
-- [x] Model registry auto-load and safe paths  
-- [x] Live model scraping from OpenAI (optional API key)  
-- [ ] Add `tokenkit models list` command  
-- [ ] Optional SharpToken / Microsoft.ML.Tokenizers integration  
-- [ ] Publish stable v1.0.0 to NuGet + dotnet tool feed  
+| 🌐 **Extended Provider Support** | Add Gemini, Claude, and Mistral integrations |
+| 💾 **Persistent Config Profiles** | Store model defaults and pricing overrides per project |
+| 🧮 **Batch Analysis** | Analyze multiple files or prompts in a single command |
+| 📊 **Report Generation** | Export CSV/JSON summaries of token usage and estimated cost |
+| 🧠 **LLM-Aware Cost Planner** | Simulate conversation cost across multi-turn dialogues |
+| 🧩 **IDE Integrations** | VS Code and JetBrains plugins for inline token analysis |
+| ⚙️ **Custom Encoders** | Support community-built encoders and language models |
 
 ---
 
 ## 💡 License
 
 Licensed under the [MIT License](LICENSE).  
-© 2025 Andrew Clements
-
-
----
-
-## 🎨 Phase 8 — CLI Polish, Logging & Automation Support
-
-| Feature | Description |
-|----------|-------------|
-| 🧾 **Colorized Output** | All CLI commands now use `ConsoleStyler` for clear, color-coded feedback (green ✅, yellow ⚠️, red ❌). |
-| 🤫 **Quiet Mode (`--quiet`)** | Suppresses console output while still writing structured logs to `tokenkit.log`. Ideal for CI/CD pipelines. |
-| ⚙️ **Structured Logging** | Every operation is logged with timestamps and severity in `tokenkit.log` (auto-rotating, max 1MB). |
-| 🧩 **JSON Mode (`--json`)** | Outputs raw JSON (no colors or emojis) for automation and machine-readable workflows. |
-| 🧠 **ASCII Banner** | TokenKit now includes a startup banner and version info header for professional CLI presentation. |
-| 🧪 **Enhanced Tests** | Coverage expanded to include encoders, CLI output modes, and logging behavior. |
-
----
-
-## 🧪 Extended CLI Examples
-
-### 🔹 Standard Analysis
-```bash
-tokenkit analyze "Hello from TokenKit!" --model gpt-4o
-```
-✅ Produces colorized JSON summary + log entry.
-
-### 🔹 JSON Mode (Automation / CI)
-```bash
-tokenkit analyze "Hello world" --model gpt-4o --json
-```
-Outputs pure JSON only, suppressing banner and emojis:
-```json
-{
-  "Model": "gpt-4o",
-  "Provider": "OpenAI",
-  "TokenCount": 7,
-  "EstimatedCost": 0.000105,
-  "Engine": "simple",
-  "Valid": true
-}
-```
-
-### 🔹 Quiet Mode (Log Only)
-```bash
-tokenkit analyze "Silent test" --model gpt-4o --quiet
-```
-No console output. Log file receives entries like:
-```
-2025-10-17 22:43:15 [INFO] Analyze started with model=gpt-4o
-2025-10-17 22:43:15 [SUCCESS] Analyzed 7 tokens using simple (gpt-4o)
-```
-
-### 🔹 Model Listing with JSON
-```bash
-tokenkit models list --json
-```
-
----
-
-## 📜 Logs
-
-All CLI runs write to `tokenkit.log` (auto-rotated at 1 MB).  
-You can find it under your TokenKit working directory, e.g.:
-```
-src/TokenKit/bin/Debug/net8.0/tokenkit.log
-```
-
----
-
-## 📈 Code Coverage
-
-TokenKit targets **100% test coverage** with xUnit and Codecov integration.  
-Run coverage locally:
-
-```bash
-dotnet test --collect:"XPlat Code Coverage"
-```
-
-View detailed results in Codecov:  
-[![Codecov](https://codecov.io/gh/AndrewClements84/TokenKit/branch/master/graph/badge.svg)](https://app.codecov.io/gh/AndrewClements84/TokenKit)
-
----
-
-## 🗺️ Updated Roadmap (as of 2025-10-17)
-
-| Phase | Feature | Status |
-|-------|----------|---------|
-| 1 | Core tokenization + cost estimation | ✅ Done |
-| 2 | Validation logic | ✅ Done |
-| 3 | Model registry (JSON-based) | ✅ Done |
-| 4 | CLI commands (`analyze`, `validate`, `update-models`) | ✅ Done |
-| 5 | Scraper service (OpenAI API optional) | ✅ Done |
-| 6 | Advanced encoders (`SharpToken`, `ML.Tokenizers`) | ✅ Done |
-| 7 | Tests + Codecov integration | ✅ Done |
-| 8 | CLI polish (`--json`, `--quiet`, logging, banner) | ✅ Done |
-| 9 | NuGet + global CLI release (v1.0.0) | 🔄 Pending Release |
-
----
-
-© 2025 Andrew Clements — MIT License  
-Flow Labs / TokenKit — https://github.com/AndrewClements84/TokenKit
+© 2025 Andrew Clements — Flow Labs / TokenKit
