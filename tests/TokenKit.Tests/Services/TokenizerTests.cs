@@ -95,6 +95,54 @@ namespace TokenKit.Tests.Core.Services
             Assert.Equal("simple", result.Engine);
         }
 
+        [Fact]
+        public async Task Analyze_ShouldThrow_WhenModelIsUnknown()
+        {
+            // Arrange: minimal Core setup with empty registry
+            var services = new ServiceCollection();
+            services.AddSingleton<IModelRegistry>(new InMemoryModelRegistry(Array.Empty<ModelInfo>()));
+            services.AddSingleton<ITokenizerEngine, SimpleTextEncoder>();
+            services.AddSingleton<ICostEstimator, BasicCostEstimator>();
+            services.AddSingleton<ITokenKitCore, TokenKitCore>();
+
+            var core = services.BuildServiceProvider().GetRequiredService<ITokenKitCore>();
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
+            {
+                await core.AnalyzeAsync(new AnalyzeRequest
+                {
+                    Text = "This should fail",
+                    ModelId = "non-existent-model"
+                });
+            });
+
+            Assert.Contains("Unknown model", ex.Message);
+        }
+
+        [Fact]
+        public async Task Validate_ShouldThrow_WhenModelIsUnknown()
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<IModelRegistry>(new InMemoryModelRegistry(Array.Empty<ModelInfo>()));
+            services.AddSingleton<ITokenizerEngine, SimpleTextEncoder>();
+            services.AddSingleton<ICostEstimator, BasicCostEstimator>();
+            services.AddSingleton<ITokenKitCore, TokenKitCore>();
+
+            var core = services.BuildServiceProvider().GetRequiredService<ITokenKitCore>();
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
+            {
+                await core.ValidateAsync(new ValidateRequest
+                {
+                    Text = "Some text",
+                    ModelId = "non-existent-model"
+                });
+            });
+
+            Assert.Contains("Unknown model", ex.Message);
+        }
+
         private sealed class InMemoryModelRegistry : IModelRegistry
         {
             private readonly List<ModelInfo> _models;

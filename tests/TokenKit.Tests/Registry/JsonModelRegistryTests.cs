@@ -75,5 +75,42 @@ namespace TokenKit.Tests.Core.Registry
             Assert.Equal(2, openaiModels.Count);
             Assert.All(openaiModels, m => Assert.Equal("OpenAI", m.Provider));
         }
+
+        [Fact]
+        public void Constructor_ShouldDeserializeValidJsonFile()
+        {
+            // Arrange
+            var tempDir = Path.Combine(Path.GetTempPath(), $"TokenKitTests_{Guid.NewGuid()}");
+            Directory.CreateDirectory(tempDir);
+            var filePath = Path.Combine(tempDir, "models.data.json");
+
+            var models = new List<ModelInfo>
+            {
+                new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 100000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" }
+            };
+            File.WriteAllText(filePath, System.Text.Json.JsonSerializer.Serialize(models));
+
+            // Act
+            var registry = new JsonModelRegistry(filePath);
+            var result = registry.GetAll();
+
+            // Assert
+            Assert.Single(result);
+            Assert.Equal("gpt-4o", result[0].Id);
+        }
+
+        [Fact]
+        public void Constructor_ShouldFallbackToEmptyList_WhenFileEmpty()
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), $"TokenKitTests_{Guid.NewGuid()}");
+            Directory.CreateDirectory(tempDir);
+            var filePath = Path.Combine(tempDir, "models.data.json");
+            File.WriteAllText(filePath, ""); // empty file => Deserialize returns null, triggers ?? new()
+
+            var registry = new JsonModelRegistry(filePath);
+            var result = registry.GetAll();
+
+            Assert.Empty(result);
+        }
     }
 }
