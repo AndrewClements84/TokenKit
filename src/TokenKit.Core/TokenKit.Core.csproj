@@ -7,7 +7,7 @@
 
 		<!-- NuGet Metadata -->
 		<PackageId>TokenKit.Core</PackageId>
-		<Version>1.1.0</Version>
+		<Version>1.2.0</Version>
 		<Authors>Andrew Clements</Authors>
 		<Company>AndrewClements84</Company>
 		<Description>Core abstractions, interfaces, and shared models for the TokenKit ecosystem.</Description>
