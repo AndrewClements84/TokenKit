@@ -9,7 +9,7 @@
     <ToolCommandName>tokenkit</ToolCommandName>
     <PackageOutputPath>../nupkg</PackageOutputPath>
     <PackageId>TokenKit</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>AndrewClements84</Authors>
     <Company>AndrewClements84</Company>
 	  <Description>
@@ -25,11 +25,14 @@
 		nlp;language-model;tokens;cost-estimation;usage-tracking;prompt;prompting;
 		model-registry;developer-tools;dotnet;net;cli;ai-toolkit
 	</PackageTags>
+	<PackageIcon>logo.png</PackageIcon>
+	<PackageIconUrl></PackageIconUrl>	
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="" />
     <None Include="../../assets/logo.png" Pack="true" PackagePath="assets/" />
+	<None Include="logo.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 	<ItemGroup>

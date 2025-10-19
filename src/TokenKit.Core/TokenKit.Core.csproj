@@ -7,14 +7,22 @@
 
 		<!-- NuGet Metadata -->
 		<PackageId>TokenKit.Core</PackageId>
-		<Version>1.0.0</Version>
+		<Version>1.1.0</Version>
 		<Authors>Andrew Clements</Authors>
 		<Company>AndrewClements84</Company>
 		<Description>Core abstractions, interfaces, and shared models for the TokenKit ecosystem.</Description>
 		<PackageTags>tokenization;llm;ai;gpt;openai;anthropic;core;flowai;tokenkit</PackageTags>
 		<RepositoryUrl>https://github.com/AndrewClements84/TokenKit</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageIcon>logo.png</PackageIcon>
+		<PackageIconUrl></PackageIconUrl>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="../../README.md" Pack="true" PackagePath="" />
+		<None Include="../../assets/logo.png" Pack="true" PackagePath="assets/" />
+		<None Include="logo.png" Pack="true" PackagePath="\" />
+	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
