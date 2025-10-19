@@ -28,5 +28,21 @@ namespace TokenKit.Tests.Services.Encoders
         {
             Assert.Equal("mltokenizers", _encoder.Name);
         }
+
+        [Fact]
+        public void CountTokens_ShouldUseFallback_WhenModelIdIsInvalid()
+        {
+            var encoder = new MLTokenizersEncoder();
+            var model = new ModelInfo
+            {
+                Id = "non-existent-model-id", // ✅ triggers the catch block
+                Encoding = "cl100k_base"
+            };
+
+            var count = encoder.CountTokens("Hello TokenKit!", model);
+
+            // We just care that it didn’t throw and returned a positive token count.
+            Assert.True(count > 0);
+        }
     }
 }

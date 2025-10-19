@@ -28,5 +28,35 @@ namespace TokenKit.Tests.Services.Encoders
         {
             Assert.Equal("sharptoken", _encoder.Name);
         }
+
+        [Fact]
+        public void CountTokens_ShouldUseDefaultEncoding_WhenModelEncodingIsNullOrEmpty()
+        {
+            // Arrange
+            var encoder = new SharpTokenEncoder();
+            var model = new ModelInfo
+            {
+                Id = "gpt-4o",
+                Encoding = null // ✅ forces fallback to "cl100k_base"
+            };
+
+            // Act
+            var count = encoder.CountTokens("Hello default encoding!", model);
+
+            // Assert
+            Assert.True(count > 0);
+        }
+
+        [Fact]
+        public void CountTokens_ShouldUseDefaultEncoding_WhenModelEncodingIsWhitespace()
+        {
+            var encoder = new SharpTokenEncoder();
+            var model = new ModelInfo { Id = "gpt-4o", Encoding = "   " }; // whitespace
+
+            var count = encoder.CountTokens("Hello TokenKit coverage!", model);
+
+            Assert.True(count > 0);
+        }
+
     }
 }
