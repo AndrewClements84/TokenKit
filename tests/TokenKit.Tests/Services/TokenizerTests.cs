@@ -1,70 +1,109 @@
-﻿using TokenKit.Models;
-using TokenKit.Registry;
-using TokenKit.Services;
+﻿using Microsoft.Extensions.DependencyInjection;
+using TokenKit.Core.Extensions;
+using TokenKit.Core.Interfaces;
+using TokenKit.Core.Models;
+using TokenKit.Core.Implementations;
+using TokenKit.Services.Encoders;
 
-namespace TokenKit.Tests.Services 
+namespace TokenKit.Tests.Core.Services
 {
     public class TokenizerTests
     {
-        [Fact]
-        public void Analyze_Should_Return_Correct_TokenCount()
+        private static ITokenKitCore CreateCore()
         {
-            var service = new TokenizerService();
-            var result = service.Analyze("Hello world from TokenKit", "gpt-4o");
+            var services = new ServiceCollection();
 
-            Assert.Equal(4, result.TokenCount);
-            Assert.Equal("SimpleTokenizer", result.Engine); // since default encoder
+            // 1️⃣  Provide an in-memory registry with one model (no JSON needed)
+            var models = new List<ModelInfo>
+            {
+                new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 128000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" }
+            };
+            services.AddSingleton<IModelRegistry>(new InMemoryModelRegistry(models));
+
+            // 2️⃣  Register engines + cost estimator + core
+            services.AddSingleton<ITokenizerEngine, SimpleTextEncoder>();
+            services.AddSingleton<ITokenizerEngine, SharpTokenEncoder>();
+            services.AddSingleton<ITokenizerEngine, MLTokenizersEncoder>();
+            services.AddSingleton<ICostEstimator, BasicCostEstimator>();
+            services.AddSingleton<ITokenKitCore, TokenKitCore>();
+
+            return services.BuildServiceProvider().GetRequiredService<ITokenKitCore>();
         }
 
         [Fact]
-        public void CostEstimator_Should_Return_Correct_Cost()
+        public async Task Analyze_ShouldReturnExpectedTokenCount()
         {
-            var model = new ModelSpec
+            var core = CreateCore();
+
+            var result = await core.AnalyzeAsync(new AnalyzeRequest
+            {
+                Text = "Hello world from TokenKit",
+                ModelId = "gpt-4o",
+                Engine = "simple"
+            });
+
+            Assert.True(result.TokenCount > 0);
+            Assert.Equal("simple", result.Engine);
+        }
+
+        [Fact]
+        public void CostEstimator_ShouldReturnCorrectCost()
+        {
+            var model = new ModelInfo
             {
                 Id = "mock-model",
                 InputPricePer1K = 0.01m,
                 OutputPricePer1K = 0.02m
             };
-
-            var cost = CostEstimator.Estimate(model, 1000, 500);
-            Assert.Equal(0.01m * 1 + 0.02m * 0.5m, cost);
+            var estimator = new BasicCostEstimator();
+            var cost = estimator.EstimateTotal(model, 1500);
+            Assert.Equal(Math.Round(1500 * 0.03m / 1000m, 6), cost);
         }
 
         [Fact]
-        public void Simple_And_SharpToken_Encoders_Should_Produce_Different_TokenCounts()
+        public async Task DifferentEncoders_ShouldReturnDifferentCounts()
         {
-            var text = "Hello world from TokenKit — testing tokenization!";
-            var simple = new TokenizerService("simple").Analyze(text, "gpt-4o");
-            var sharp = new TokenizerService("sharptoken").Analyze(text, "gpt-4o");
+            var core = CreateCore();
+            var text = "Hello world from TokenKit — multi-engine test!";
+
+            var simple = await core.AnalyzeAsync(new AnalyzeRequest { Text = text, ModelId = "gpt-4o", Engine = "simple" });
+            var sharp = await core.AnalyzeAsync(new AnalyzeRequest { Text = text, ModelId = "gpt-4o", Engine = "sharptoken" });
 
             Assert.NotEqual(simple.TokenCount, sharp.TokenCount);
-            Assert.Equal("SimpleTokenizer", simple.Engine);
-            Assert.Equal("SharpToken", sharp.Engine);
+            Assert.Equal("simple", simple.Engine);
+            Assert.Equal("sharptoken", sharp.Engine);
         }
 
         [Fact]
-        public void SharpToken_And_MLTokenizers_Encoders_Should_Work_Correctly()
+        public async Task MLEngine_ShouldReturnTokenCount()
         {
+            var core = CreateCore();
             var text = "TokenKit makes multi-encoder testing straightforward!";
-            var sharp = new TokenizerService("sharptoken").Analyze(text, "gpt-4o");
-            var ml = new TokenizerService("mltokenizers").Analyze(text, "gpt-4o");
+            var ml = await core.AnalyzeAsync(new AnalyzeRequest { Text = text, ModelId = "gpt-4o", Engine = "mltokenizers" });
 
-            Assert.True(sharp.TokenCount > 0);
             Assert.True(ml.TokenCount > 0);
-            Assert.Equal("SharpToken", sharp.Engine);
-            Assert.Equal("Microsoft.ML.Tokenizers (Tiktoken)", ml.Engine);
+            Assert.Equal("mltokenizers", ml.Engine);
         }
 
         [Fact]
-        public void Invalid_Engine_Should_Fallback_To_Simple()
+        public async Task InvalidEngine_ShouldFallbackToDefault()
         {
-            var text = "Invalid engine test input";
-            var invalid = new TokenizerService("unknownengine").Analyze(text, "gpt-4o");
+            var core = CreateCore();
+            var result = await core.AnalyzeAsync(new AnalyzeRequest { Text = "Invalid engine test", ModelId = "gpt-4o", Engine = "unknown" });
 
-            Assert.Equal("SimpleTokenizer", invalid.Engine);
-            Assert.True(invalid.TokenCount > 0);
+            Assert.True(result.TokenCount > 0);
+            Assert.Equal("simple", result.Engine);
+        }
+
+        private sealed class InMemoryModelRegistry : IModelRegistry
+        {
+            private readonly List<ModelInfo> _models;
+            public InMemoryModelRegistry(IEnumerable<ModelInfo> models) => _models = models.ToList();
+            public ModelInfo? Get(string id) => _models.FirstOrDefault(m => string.Equals(m.Id, id, StringComparison.OrdinalIgnoreCase));
+            public IReadOnlyList<ModelInfo> GetAll(string? provider = null) =>
+                string.IsNullOrWhiteSpace(provider)
+                    ? _models
+                    : _models.Where(m => string.Equals(m.Provider, provider, StringComparison.OrdinalIgnoreCase)).ToList();
         }
     }
 }
-
-

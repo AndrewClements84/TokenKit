@@ -1,15 +1,16 @@
-﻿namespace TokenKit.Services.Encoders;
+﻿using TokenKit.Core.Interfaces;
+using TokenKit.Core.Models;
 
-public class SimpleTextEncoder : ITextEncoder
+namespace TokenKit.Services.Encoders;
+
+public class SimpleTextEncoder : ITokenizerEngine
 {
-    public string Name => "SimpleTokenizer";
+    public string Name => "simple";
 
-    public int CountTokens(string text)
+    public int CountTokens(string text, ModelInfo model)
     {
-        if (string.IsNullOrWhiteSpace(text))
-            return 0;
-
-        return text.Split(new[] { ' ', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+        return text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
     }
 }
 

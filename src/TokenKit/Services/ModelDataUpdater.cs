@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using TokenKit.Models;
 
 namespace TokenKit.Services;
 
@@ -9,7 +8,6 @@ public class ModelDataUpdater
 
     public ModelDataUpdater(string dataPath)
     {
-        // Always resolve relative to the assembly folder
         var baseDir = AppContext.BaseDirectory;
         _dataPath = Path.Combine(baseDir, dataPath);
 

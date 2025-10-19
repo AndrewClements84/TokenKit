@@ -1,7 +1,10 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using TokenKit.Models;
-using TokenKit.Registry;
+using Microsoft.Extensions.DependencyInjection;
+using TokenKit.Core.Extensions;
+using TokenKit.Core.Interfaces;
+using TokenKit.Core.Models;
+using TokenKit.Services.Encoders;
 using TokenKit.Services;
 
 namespace TokenKit.CLI;
@@ -9,11 +12,20 @@ namespace TokenKit.CLI;
 [ExcludeFromCodeCoverage]
 public static class TokenKitCLI
 {
-    // Global flags so subcommands can access them
     private static bool JsonMode { get; set; } = false;
+    private static ITokenKitCore? Core { get; set; }
 
     public static async Task RunAsync(string[] args)
     {
+        // Bootstraps Core internally for CLI use
+        var services = new ServiceCollection();
+        services.AddTokenKitCore(jsonPath: Path.Combine(AppContext.BaseDirectory, "Registry", "models.data.json"));
+        services.AddSingleton<ITokenizerEngine, SimpleTextEncoder>();
+        services.AddSingleton<ITokenizerEngine, SharpTokenEncoder>();
+        services.AddSingleton<ITokenizerEngine, MLTokenizersEncoder>();
+        var provider = services.BuildServiceProvider();
+        Core = provider.GetRequiredService<ITokenKitCore>();
+
         JsonMode = args.Contains("--json", StringComparer.OrdinalIgnoreCase);
         Logger.QuietMode = args.Contains("--quiet", StringComparer.OrdinalIgnoreCase) || JsonMode;
 
@@ -27,8 +39,8 @@ public static class TokenKitCLI
                 ░░░██║░░░██║░░██║██╔═██╗░██╔══╝░░██║╚████║██╔═██╗░██║░░░██║░░░
                 ░░░██║░░░╚█████╔╝██║░╚██╗███████╗██║░╚███║██║░╚██╗██║░░░██║░░░
                 ░░░╚═╝░░░░╚════╝░╚═╝░░╚═╝╚══════╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░░╚═╝░░░
-                ");
-                            Console.ResetColor();
+            ");
+            Console.ResetColor();
 
             var version = typeof(TokenKitCLI).Assembly.GetName().Version?.ToString() ?? "unknown";
             ConsoleStyler.WriteInfo($"TokenKit v{version}  |  AndrewClements84 © 2025 |  https://github.com/AndrewClements84/TokenKit\n");
@@ -53,23 +65,22 @@ public static class TokenKitCLI
             case "validate":
                 await ValidateAsync(args);
                 break;
+            case "models":
+                await HandleModelsCommandAsync(args);
+                break;
             case "update-models":
                 await UpdateModelsAsync(args);
                 break;
             case "scrape-models":
                 await ScrapeModelsAsync(args);
                 break;
-            case "models":
-                await HandleModelsCommandAsync(args);
+            case "--help":
+            case "-h":
+                ShowHelp();
                 break;
             case "--version":
             case "-v":
                 ShowVersion();
-                break;
-            case "--help":
-            case "-h":
-                var compact = args.Length > 1 && args[1].Equals("short", StringComparison.OrdinalIgnoreCase);
-                ShowHelp(compact);
                 break;
             default:
                 Logger.Warn($"Unknown command: {command}");
@@ -81,26 +92,17 @@ public static class TokenKitCLI
     // ------------------------------------------------------------
     // HELP & VERSION
     // ------------------------------------------------------------
-
-    private static void ShowHelp(bool compact = false)
+    private static void ShowHelp()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
         var version = typeof(TokenKitCLI).Assembly.GetName().Version?.ToString() ?? "unknown";
         Console.WriteLine($"🧠 TokenKit CLI v{version}");
         Console.ResetColor();
 
-        if (compact)
-        {
-            Console.WriteLine("Usage: tokenkit <command> [options]");
-            Console.WriteLine("Try 'tokenkit --help' for more details.");
-            return;
-        }
-
         Console.WriteLine("------------------------------------------------------------");
         Console.WriteLine("Tokenization & Validation Toolkit for LLMs");
         Console.WriteLine("------------------------------------------------------------");
         Console.WriteLine();
-
         ConsoleStyler.WriteInfo("📘 Usage:");
         Console.WriteLine("  tokenkit analyze \"<text|file>\" --model <model-id> [--engine <engine>]");
         Console.WriteLine("  tokenkit validate \"<text|file>\" --model <model-id> [--engine <engine>]");
@@ -108,34 +110,6 @@ public static class TokenKitCLI
         Console.WriteLine("  tokenkit update-models [--openai-key <key>]");
         Console.WriteLine("  tokenkit scrape-models [--openai-key <key>]");
         Console.WriteLine();
-
-        ConsoleStyler.WriteInfo("⚙️ Options:");
-        Console.WriteLine("  --engine <engine>     Select encoding engine [simple|sharptoken|mltokenizers]");
-        Console.WriteLine("  --model <model-id>    Specify model to analyze/validate (e.g., gpt-4o)");
-        Console.WriteLine("  --openai-key <key>    Provide OpenAI API key for live updates");
-        Console.WriteLine("  --provider <name>     Filter models by provider (case-insensitive)");
-        Console.WriteLine("  --json                Output results as raw JSON (suppresses colored output)");
-        Console.WriteLine("  --quiet               Suppress console output (logs still written to tokenkit.log)");
-        Console.WriteLine("  --version, -v         Display the installed TokenKit version");
-        Console.WriteLine("  --help, -h            Show this help message");
-        Console.WriteLine();
-
-        ConsoleStyler.WriteInfo("🔍 Examples:");
-        Console.WriteLine("  tokenkit analyze \"Hello from TokenKit!\" --model gpt-4o --engine sharptoken");
-        Console.WriteLine("  tokenkit validate prompt.txt --model gpt-4o");
-        Console.WriteLine("  tokenkit models list --provider Anthropic");
-        Console.WriteLine("  tokenkit analyze \"Hello\" --model gpt-4o --json");
-        Console.WriteLine();
-
-        ConsoleStyler.WriteInfo("🧾 Output:");
-        Console.WriteLine("  JSON summary including token count, cost, and validation status.");
-        Console.WriteLine();
-
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine("------------------------------------------------------------");
-        Console.WriteLine("© 2025 AndrewClements84 | MIT License | https://github.com/AndrewClements84/TokenKit");
-        Console.WriteLine("------------------------------------------------------------");
-        Console.ResetColor();
     }
 
     private static void ShowVersion()
@@ -146,172 +120,27 @@ public static class TokenKitCLI
     }
 
     // ------------------------------------------------------------
-    // MODELS COMMAND
-    // ------------------------------------------------------------
-    private static async Task HandleModelsCommandAsync(string[] args)
-    {
-        if (args.Length < 2)
-        {
-            Logger.Error("Missing subcommand for 'models'.");
-            ConsoleStyler.WriteError("Missing subcommand. Use: tokenkit models list");
-            return;
-        }
-
-        var subcommand = args[1].ToLowerInvariant();
-        switch (subcommand)
-        {
-            case "list":
-                string? providerFilter = null;
-                var providerIndex = Array.IndexOf(args, "--provider");
-                if (providerIndex >= 0 && providerIndex + 1 < args.Length)
-                    providerFilter = args[providerIndex + 1];
-                ListModels(providerFilter);
-                break;
-
-            default:
-                Logger.Warn($"Unknown models subcommand: {subcommand}");
-                ConsoleStyler.WriteWarning($"Unknown subcommand '{subcommand}'. Try: tokenkit models list");
-                break;
-        }
-
-        await Task.CompletedTask;
-    }
-
-    private static void ListModels(string? providerFilter = null)
-    {
-        try
-        {
-            var models = ModelRegistry.GetAll();
-            if (models == null || models.Count == 0)
-            {
-                Logger.Warn("No models found in registry.");
-                ConsoleStyler.WriteWarning("No models found in registry.");
-                return;
-            }
-
-            if (!string.IsNullOrWhiteSpace(providerFilter))
-            {
-                models = models
-                    .Where(m => m.Provider.Equals(providerFilter, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                if (models.Count == 0)
-                {
-                    Logger.Warn($"No models found for provider '{providerFilter}'.");
-                    ConsoleStyler.WriteWarning($"No models found for provider '{providerFilter}'.");
-                    return;
-                }
-            }
-
-            if (JsonMode)
-            {
-                var json = JsonSerializer.Serialize(models, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine(json);
-                return;
-            }
-
-            Logger.Info($"Listing {models.Count} models {(providerFilter != null ? $"for {providerFilter}" : "")}");
-            ConsoleStyler.WriteInfo("📦 Registered Models:");
-            Console.WriteLine("-------------------------------------------------------------");
-            Console.WriteLine($"{"Provider",-12} {"Model ID",-22} {"MaxTokens",10} {"Input/Output (per 1K)",30}");
-            Console.WriteLine("-------------------------------------------------------------");
-
-            foreach (var m in models)
-            {
-                Console.WriteLine($"{m.Provider,-12} {m.Id,-22} {m.MaxTokens,10:N0}  " +
-                    $"${m.InputPricePer1K:F4}/${m.OutputPricePer1K:F4}");
-            }
-
-            Console.WriteLine("-------------------------------------------------------------");
-            Logger.Success($"Listed {models.Count} models");
-            ConsoleStyler.WriteSuccess($"Total: {models.Count} {(providerFilter != null ? $"({providerFilter})" : "")} models\n");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Failed to list models: {ex.Message}");
-            ConsoleStyler.WriteError($"Failed to list models: {ex.Message}");
-        }
-    }
-
-    // ------------------------------------------------------------
-    // ANALYZE COMMAND
+    // ANALYZE
     // ------------------------------------------------------------
     private static async Task AnalyzeAsync(string[] args)
     {
         try
         {
-            string? pipedInput = null;
-            if (Console.IsInputRedirected)
+            var (text, modelId, engine) = await ParseInputArgsAsync(args);
+            var response = await Core!.AnalyzeAsync(new AnalyzeRequest
             {
-                pipedInput = await Console.In.ReadToEndAsync();
-                pipedInput = pipedInput.Trim();
-            }
-
-            var modelFlagIndex = Array.IndexOf(args, "--model");
-            var modelId = (modelFlagIndex >= 0 && modelFlagIndex + 1 < args.Length)
-                ? args[modelFlagIndex + 1]
-                : "gpt-4o";
-
-            var engineFlagIndex = Array.IndexOf(args, "--engine");
-            var engineName = (engineFlagIndex >= 0 && engineFlagIndex + 1 < args.Length)
-                ? args[engineFlagIndex + 1]
-                : "simple";
-
-            Logger.Info($"Analyze started with model={modelId}, engine={engineName}");
-
-            string text;
-
-            if (!string.IsNullOrWhiteSpace(pipedInput))
-                text = pipedInput;
-            else if (args.Length > 1)
-            {
-                var inputParts = (modelFlagIndex > 0 ? args[1..modelFlagIndex] : args[1..]);
-                var inputArg = string.Join(" ", inputParts);
-                text = File.Exists(inputArg)
-                    ? await File.ReadAllTextAsync(inputArg)
-                    : inputArg;
-            }
-            else
-            {
-                Logger.Error("No input provided to analyze.");
-                ConsoleStyler.WriteError("Missing text, file path, or stdin input.");
-                return;
-            }
-
-            var tokenizer = new TokenizerService(engineName);
-            var result = tokenizer.Analyze(text, modelId);
-
-            var model = ModelRegistry.Get(modelId);
-            if (model == null)
-            {
-                Logger.Error($"Model '{modelId}' not found in registry.");
-                ConsoleStyler.WriteError($"Model '{modelId}' not found in registry.");
-                return;
-            }
-
-            var cost = CostEstimator.Estimate(model, result.TokenCount);
-            var valid = result.TokenCount <= model.MaxTokens;
-
-            var output = new
-            {
-                Model = model.Id,
-                Provider = model.Provider,
-                result.TokenCount,
-                EstimatedCost = cost,
-                Engine = result.Engine,
-                Valid = valid
-            };
-
-            Logger.Success($"Analyzed {result.TokenCount} tokens using {engineName} ({modelId})");
+                Text = text,
+                ModelId = modelId,
+                Engine = engine
+            });
 
             if (JsonMode)
             {
-                var json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine(json);
+                Console.WriteLine(JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true }));
             }
             else
             {
-                ConsoleStyler.WriteJson(output, success: valid);
+                ConsoleStyler.WriteJson(response, success: response.Valid);
             }
         }
         catch (Exception ex)
@@ -322,76 +151,27 @@ public static class TokenKitCLI
     }
 
     // ------------------------------------------------------------
-    // VALIDATE COMMAND
+    // VALIDATE
     // ------------------------------------------------------------
     private static async Task ValidateAsync(string[] args)
     {
         try
         {
-            string? pipedInput = null;
-            if (Console.IsInputRedirected)
+            var (text, modelId, engine) = await ParseInputArgsAsync(args);
+            var response = await Core!.ValidateAsync(new ValidateRequest
             {
-                pipedInput = await Console.In.ReadToEndAsync();
-                pipedInput = pipedInput.Trim();
-            }
-
-            var modelFlagIndex = Array.IndexOf(args, "--model");
-            var modelId = (modelFlagIndex >= 0 && modelFlagIndex + 1 < args.Length)
-                ? args[modelFlagIndex + 1]
-                : "gpt-4o";
-
-            var engineFlagIndex = Array.IndexOf(args, "--engine");
-            var engineName = (engineFlagIndex >= 0 && engineFlagIndex + 1 < args.Length)
-                ? args[engineFlagIndex + 1]
-                : "simple";
-
-            Logger.Info($"Validation started for {modelId} with engine={engineName}");
-
-            string text;
-
-            if (!string.IsNullOrWhiteSpace(pipedInput))
-                text = pipedInput;
-            else if (args.Length > 1)
-            {
-                var inputParts = (modelFlagIndex > 0 ? args[1..modelFlagIndex] : args[1..]);
-                var inputArg = string.Join(" ", inputParts);
-                text = File.Exists(inputArg)
-                    ? await File.ReadAllTextAsync(inputArg)
-                    : inputArg;
-            }
-            else
-            {
-                Logger.Error("No input provided to validate.");
-                ConsoleStyler.WriteError("Missing text, file path, or stdin input.");
-                return;
-            }
-
-            var tokenizer = new TokenizerService(engineName);
-            var result = tokenizer.Analyze(text, modelId);
-            var model = ModelRegistry.Get(modelId)!;
-
-            var validation = new ValidationService().Validate(model, result.TokenCount);
-
-            var output = new
-            {
-                Model = model.Id,
-                Provider = model.Provider,
-                result.TokenCount,
-                Engine = result.Engine,
-                validation.IsValid,
-                validation.Message
-            };
-
-            Logger.Info($"Validated {result.TokenCount} tokens ({validation.Message})");
+                Text = text,
+                ModelId = modelId,
+                Engine = engine
+            });
 
             if (JsonMode)
             {
-                var json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine(json);
+                Console.WriteLine(JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true }));
             }
             else
             {
-                ConsoleStyler.WriteJson(output, success: validation.IsValid);
+                ConsoleStyler.WriteJson(response, success: response.IsValid);
             }
         }
         catch (Exception ex)
@@ -402,138 +182,119 @@ public static class TokenKitCLI
     }
 
     // ------------------------------------------------------------
-    // UPDATE-MODELS COMMAND
+    // MODELS LIST
+    // ------------------------------------------------------------
+    private static async Task HandleModelsCommandAsync(string[] args)
+    {
+        if (args.Length < 2)
+        {
+            ConsoleStyler.WriteWarning("Missing subcommand for 'models'. Use 'tokenkit models list'.");
+            return;
+        }
+
+        var sub = args[1].ToLowerInvariant();
+        if (sub != "list")
+        {
+            ConsoleStyler.WriteWarning($"Unknown subcommand '{sub}' for 'models'.");
+            return;
+        }
+
+        var providerIndex = Array.IndexOf(args, "--provider");
+        string? provider = providerIndex >= 0 && providerIndex + 1 < args.Length ? args[providerIndex + 1] : null;
+
+        var models = await Core!.GetModelsAsync(provider);
+
+        if (JsonMode)
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(models, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            return;
+        }
+
+        if (models.Count == 0)
+        {
+            ConsoleStyler.WriteWarning("No models found.");
+            return;
+        }
+
+        ConsoleStyler.WriteInfo($"📦 Registered Models ({models.Count}):");
+        Console.WriteLine("-------------------------------------------------------------");
+        Console.WriteLine($"{"Provider",-12} {"Model ID",-22} {"MaxTokens",10} {"Input/Output (per 1K)",30}");
+        Console.WriteLine("-------------------------------------------------------------");
+
+        foreach (var m in models)
+            Console.WriteLine($"{m.Provider,-12} {m.Id,-22} {m.MaxTokens,10:N0}  ${m.InputPricePer1K:F4}/${m.OutputPricePer1K:F4}");
+
+        Console.WriteLine("-------------------------------------------------------------");
+        ConsoleStyler.WriteSuccess($"Total: {models.Count} models\n");
+    }
+
+
+    // ------------------------------------------------------------
+    // UPDATE & SCRAPE
     // ------------------------------------------------------------
     private static async Task UpdateModelsAsync(string[] args)
     {
-        try
+        string? openAiKey = GetFlagValue(args, "--openai-key");
+        var updater = new ModelDataUpdater("Registry/models.data.json");
+        await updater.UpdateAsync(openAiKey);
+        ConsoleStyler.WriteSuccess("✅ Model data updated successfully.");
+    }
+
+    private static async Task ScrapeModelsAsync(string[] args)
+    {
+        string? openAiKey = GetFlagValue(args, "--openai-key");
+        var scraper = new ModelDataScraper();
+        var models = await scraper.FetchOpenAIModelsAsync(openAiKey);
+
+        if (JsonMode)
         {
-            string? pipedInput = null;
-            if (Console.IsInputRedirected)
-            {
-                pipedInput = await Console.In.ReadToEndAsync();
-                pipedInput = pipedInput.Trim();
-            }
-
-            string? openAiKey = null;
-            var keyIndex = Array.IndexOf(args, "--openai-key");
-            if (keyIndex >= 0 && keyIndex + 1 < args.Length)
-                openAiKey = args[keyIndex + 1];
-
-            var updater = new ModelDataUpdater("Registry/models.data.json");
-
-            if (!string.IsNullOrWhiteSpace(pipedInput))
-            {
-                try
-                {
-                    var models = JsonSerializer.Deserialize<List<ModelSpec>>(pipedInput);
-                    if (models is not null)
-                    {
-                        var jsonOut = JsonSerializer.Serialize(models, new JsonSerializerOptions { WriteIndented = true });
-                        await File.WriteAllTextAsync("Registry/models.data.json", jsonOut);
-                        Logger.Success($"Updated model registry with {models.Count} entries from stdin.");
-
-                        if (JsonMode)
-                        {
-                            Console.WriteLine(JsonSerializer.Serialize(
-                                new { Updated = models.Count, Source = "stdin" },
-                                new JsonSerializerOptions { WriteIndented = true }));
-                        }
-                        else
-                        {
-                            ConsoleStyler.WriteSuccess($"Updated model registry with {models.Count} entries from stdin.");
-                        }
-                        return;
-                    }
-
-                    Logger.Warn("No valid model data found in stdin input.");
-                    if (!JsonMode) ConsoleStyler.WriteWarning("No valid model data found in stdin input.");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Failed to parse JSON input: {ex.Message}");
-                    if (!JsonMode) ConsoleStyler.WriteError($"Failed to parse JSON input: {ex.Message}");
-                }
-            }
-            else
-            {
-                await updater.UpdateAsync(openAiKey);
-                Logger.Success("Model data updated successfully from available source.");
-
-                if (JsonMode)
-                {
-                    Console.WriteLine(JsonSerializer.Serialize(
-                        new { Updated = true, Source = openAiKey is null ? "fallback" : "openai" },
-                        new JsonSerializerOptions { WriteIndented = true }));
-                }
-                else
-                {
-                    ConsoleStyler.WriteSuccess("Model data updated successfully from available source.");
-                }
-            }
+            Console.WriteLine(JsonSerializer.Serialize(models, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch (Exception ex)
+        else
         {
-            Logger.Error($"UpdateModels failed: {ex.Message}");
-            if (!JsonMode) ConsoleStyler.WriteError($"UpdateModels failed: {ex.Message}");
+            ConsoleStyler.WriteSuccess($"Retrieved {models.Count} models:");
+            foreach (var m in models)
+                ConsoleStyler.WriteInfo($"  - {m.Provider}: {m.Id} ({m.MaxTokens} tokens)");
         }
     }
 
     // ------------------------------------------------------------
-    // SCRAPE-MODELS COMMAND
+    // UTILITIES
     // ------------------------------------------------------------
-    private static async Task ScrapeModelsAsync(string[] args)
+    private static async Task<(string Text, string ModelId, string Engine)> ParseInputArgsAsync(string[] args)
     {
-        Logger.Info("Fetching latest OpenAI model data...");
-        if (!JsonMode) ConsoleStyler.WriteInfo("🔍 Fetching latest OpenAI model data...");
-
-        string? openAiKey = null;
-        var keyIndex = Array.IndexOf(args, "--openai-key");
-        if (keyIndex >= 0 && keyIndex + 1 < args.Length)
-            openAiKey = args[keyIndex + 1];
-
-        try
+        string? pipedInput = null;
+        if (Console.IsInputRedirected)
         {
-            var scraper = new ModelDataScraper();
-            var models = await scraper.FetchOpenAIModelsAsync(openAiKey);
-
-            if (models.Count == 0)
-            {
-                Logger.Warn("No models retrieved (offline or missing API key).");
-                if (JsonMode)
-                {
-                    Console.WriteLine(JsonSerializer.Serialize(
-                        new { Retrieved = 0 },
-                        new JsonSerializerOptions { WriteIndented = true }));
-                }
-                else
-                {
-                    ConsoleStyler.WriteWarning("No models retrieved (possibly offline or missing API key).");
-                }
-                return;
-            }
-
-            Logger.Success($"Retrieved {models.Count} models.");
-
-            if (JsonMode)
-            {
-                Console.WriteLine(JsonSerializer.Serialize(models, new JsonSerializerOptions { WriteIndented = true }));
-            }
-            else
-            {
-                ConsoleStyler.WriteSuccess($"Retrieved {models.Count} models:");
-                foreach (var m in models)
-                    ConsoleStyler.WriteInfo($"  - {m.Provider}: {m.Id} ({m.MaxTokens} tokens)");
-
-                Console.WriteLine();
-                ConsoleStyler.WriteInfo("To save these models locally, run:");
-                Console.WriteLine("  tokenkit update-models [--openai-key sk-xxxx]");
-            }
+            pipedInput = await Console.In.ReadToEndAsync();
+            pipedInput = pipedInput.Trim();
         }
-        catch (Exception ex)
+
+        var modelId = GetFlagValue(args, "--model") ?? "gpt-4o";
+        var engine = GetFlagValue(args, "--engine") ?? "simple";
+
+        string text;
+        if (!string.IsNullOrWhiteSpace(pipedInput))
         {
-            Logger.Error($"ScrapeModels failed: {ex.Message}");
-            if (!JsonMode) ConsoleStyler.WriteError($"Failed to scrape models: {ex.Message}");
+            text = pipedInput;
         }
+        else if (args.Length > 1)
+        {
+            var inputParts = args.Skip(1).TakeWhile(a => !a.StartsWith("--")).ToArray();
+            var inputArg = string.Join(" ", inputParts);
+            text = File.Exists(inputArg) ? await File.ReadAllTextAsync(inputArg) : inputArg;
+        }
+        else
+        {
+            throw new InvalidOperationException("No text or file input provided.");
+        }
+
+        return (text, modelId, engine);
+    }
+
+    private static string? GetFlagValue(string[] args, string flag)
+    {
+        var index = Array.IndexOf(args, flag);
+        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
     }
 }

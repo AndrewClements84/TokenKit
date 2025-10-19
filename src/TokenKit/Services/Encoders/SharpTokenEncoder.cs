@@ -1,21 +1,21 @@
 ﻿using SharpToken;
+using TokenKit.Core.Interfaces;
+using TokenKit.Core.Models;
 
 namespace TokenKit.Services.Encoders;
 
-public class SharpTokenEncoder : ITextEncoder
+public class SharpTokenEncoder : ITokenizerEngine
 {
-    private readonly GptEncoding _encoding;
-    public string Name => "SharpToken";
+    public string Name => "sharptoken";
 
-    public SharpTokenEncoder(string encodingName = "cl100k_base")
-    {
-        _encoding = GptEncoding.GetEncoding(encodingName);
-    }
-
-    public int CountTokens(string text)
+    public int CountTokens(string text, ModelInfo model)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0;
-        return _encoding.Encode(text).Count;
+
+        // Prefer model.Encoding; default to cl100k_base if blank
+        var encodingName = string.IsNullOrWhiteSpace(model.Encoding) ? "cl100k_base" : model.Encoding;
+        var encoding = GptEncoding.GetEncoding(encodingName);
+        return encoding.Encode(text).Count;
     }
 }
 

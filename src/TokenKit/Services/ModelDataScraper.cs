@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
-using TokenKit.Models;
+using TokenKit.CLI;
+using TokenKit.Core.Models;
 
 namespace TokenKit.Services;
 
@@ -13,15 +14,11 @@ public class ModelDataScraper
         _httpClient = httpClient ?? new HttpClient();
     }
 
-    /// <summary>
-    /// Fetches models from OpenAI's /v1/models endpoint if a valid API key is provided.
-    /// Falls back to local stock data if the key is missing or invalid.
-    /// </summary>
-    public async Task<List<ModelSpec>> FetchOpenAIModelsAsync(string? apiKey = null)
+    public async Task<List<ModelInfo>> FetchOpenAIModelsAsync(string? apiKey = null)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            Console.WriteLine("⚠️ No API key provided. Using fallback OpenAI model data.");
+            ConsoleStyler.WriteWarning("⚠️ No API key provided. Using fallback OpenAI model data.");
             return GetFallbackModels();
         }
 
@@ -34,14 +31,14 @@ public class ModelDataScraper
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-            var models = new List<ModelSpec>();
+            var models = new List<ModelInfo>();
 
             foreach (var item in json.GetProperty("data").EnumerateArray())
             {
                 var id = item.GetProperty("id").GetString() ?? "";
                 if (id.StartsWith("gpt-"))
                 {
-                    models.Add(new ModelSpec
+                    models.Add(new ModelInfo
                     {
                         Id = id,
                         Provider = "OpenAI",
@@ -53,19 +50,16 @@ public class ModelDataScraper
                 }
             }
 
-            if (models.Count == 0)
-                Console.WriteLine("⚠️ No GPT models found from API. Using fallback data instead.");
-
             return models.Count > 0 ? models : GetFallbackModels();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Failed to fetch live OpenAI model data: {ex.Message}");
+            ConsoleStyler.WriteError($"❌ Failed to fetch live OpenAI model data: {ex.Message}");
             return GetFallbackModels();
         }
     }
 
-    private static List<ModelSpec> GetFallbackModels() => new()
+    private static List<ModelInfo> GetFallbackModels() => new()
     {
         new() { Id = "gpt-4o", Provider = "OpenAI", MaxTokens = 128000, InputPricePer1K = 0.005m, OutputPricePer1K = 0.015m, Encoding = "cl100k_base" },
         new() { Id = "gpt-4o-mini", Provider = "OpenAI", MaxTokens = 64000, InputPricePer1K = 0.002m, OutputPricePer1K = 0.010m, Encoding = "cl100k_base" },
