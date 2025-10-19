@@ -25,14 +25,14 @@
 		nlp;language-model;tokens;cost-estimation;usage-tracking;prompt;prompting;
 		model-registry;developer-tools;dotnet;net;cli;ai-toolkit
 	</PackageTags>
-	<PackageIcon>../../assets/logo.png</PackageIcon>
+	<PackageIcon>logo.png</PackageIcon>
 	<PackageIconUrl></PackageIconUrl>	
   </PropertyGroup>
 
-  <ItemGroup>
-	  <None Include="../../assets/logo.png" Pack="true" PackagePath="\" Link="logo.png" />
-	  <None Include="../../README.md" Pack="true" PackagePath="" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="../../assets/logo.png" Pack="true" PackagePath="\" Link="logo.png" />
+		<None Include="../../README.md" Pack="true" PackagePath="" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Include="Registry\models.data.json" />
