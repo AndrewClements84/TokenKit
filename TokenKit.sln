@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TokenKit", "src\TokenKit\To
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TokenKit.Tests", "tests\TokenKit.Tests\TokenKit.Tests.csproj", "{636A7797-0481-4825-89D1-1B294C132FD9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TokenKit.Core", "src\TokenKit.Core\TokenKit.Core.csproj", "{89781812-0C24-4F01-B670-F2AA668A6220}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TokenKit.Core", "src\TokenKit.Core\TokenKit.Core.csproj", "{89781812-0C24-4F01-B670-F2AA668A6220}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

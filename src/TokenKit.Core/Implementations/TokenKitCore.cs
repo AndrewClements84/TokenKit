@@ -1,5 +1,6 @@
 ﻿using TokenKit.Core.Interfaces;
 using TokenKit.Core.Models;
+using TokenKit.Core.Encoders; // <-- NEW: add this to access TokenKitCoreEncoders
 
 namespace TokenKit.Core.Implementations;
 
@@ -9,10 +10,24 @@ public sealed class TokenKitCore : ITokenKitCore
     private readonly IDictionary<string, ITokenizerEngine> _engines;
     private readonly ICostEstimator _costs;
 
+    // ✅ Static constructor ensures encoders are registered once at startup
+    static TokenKitCore()
+    {
+        TokenKitCoreEncoders.RegisterDefaults();
+    }
+
     public TokenKitCore(IModelRegistry registry, IEnumerable<ITokenizerEngine> engines, ICostEstimator costs)
     {
         _registry = registry;
         _engines = engines.ToDictionary(e => e.Name, StringComparer.OrdinalIgnoreCase);
+
+        // ✅ Defensive fallback: if no encoders injected, use the registered defaults
+        if (_engines.Count == 0 && TokenKitCoreEncoders.Registered.Any())
+        {
+            _engines = TokenKitCoreEncoders.Registered
+                .ToDictionary(e => e.Name, StringComparer.OrdinalIgnoreCase);
+        }
+
         _costs = costs;
     }
 
@@ -60,11 +75,15 @@ public sealed class TokenKitCore : ITokenKitCore
 
     private ITokenizerEngine ResolveEngine(string? requested)
     {
+        // ✅ Try requested first
         if (!string.IsNullOrWhiteSpace(requested) && _engines.TryGetValue(requested, out var eng))
             return eng;
 
-        // default to first registered engine
-        return _engines.Values.First();
+        // ✅ Otherwise fallback to first registered default encoder
+        if (_engines.Count > 0)
+            return _engines.Values.First();
+
+        // ✅ Last resort: if encoders somehow never registered, throw clear message
+        throw new InvalidOperationException("No tokenizer engines registered in TokenKitCore.");
     }
 }
-

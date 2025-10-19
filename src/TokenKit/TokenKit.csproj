@@ -9,7 +9,7 @@
     <ToolCommandName>tokenkit</ToolCommandName>
     <PackageOutputPath>../nupkg</PackageOutputPath>
     <PackageId>TokenKit</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>AndrewClements84</Authors>
     <Company>AndrewClements84</Company>
 	  <Description>
@@ -45,10 +45,6 @@
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-	  <PackageReference Include="Microsoft.ML.Tokenizers" Version="1.0.2" />
-	  <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="1.0.2" />
-	  <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.2" />
-	  <PackageReference Include="SharpToken" Version="2.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>
