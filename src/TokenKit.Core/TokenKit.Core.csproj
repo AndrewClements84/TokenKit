@@ -14,14 +14,14 @@
 		<PackageTags>tokenization;llm;ai;gpt;openai;anthropic;core;flowai;tokenkit</PackageTags>
 		<RepositoryUrl>https://github.com/AndrewClements84/TokenKit</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageIcon>logo.png</PackageIcon>
+		<PackageIcon>../TokenKit/logo.png</PackageIcon>
 		<PackageIconUrl></PackageIconUrl>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<None Include="../../README.md" Pack="true" PackagePath="" />
 		<None Include="../../assets/logo.png" Pack="true" PackagePath="assets/" />
-		<None Include="logo.png" Pack="true" PackagePath="\" />
+		<None Include="../TokenKit/logo.png" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<ItemGroup>
